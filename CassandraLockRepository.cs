@@ -53,6 +53,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
 
+            var beforeOurWriteShades = GetShadowThreadsInLockRow(lockId);
+            if(beforeOurWriteShades.Length > 0)
+                return LockAttemptResult.ConcurrentAttempt();
             WriteLockRow(GetShadowRowKey(lockId), threadId);
             var shades = GetShadowThreadsInLockRow(lockId);
             if(shades.Length == 1)

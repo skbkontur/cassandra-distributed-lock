@@ -12,18 +12,18 @@ using GroboContainer.Impl;
 using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
-using SKBKontur.Catalogue.CassandraPrimitives.FunctionalTests.Helpers;
-using SKBKontur.Catalogue.CassandraPrimitives.FunctionalTests.Logging;
-using SKBKontur.Catalogue.CassandraPrimitives.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-using SKBKontur.Catalogue.CassandraPrimitives.SchemeActualizer;
 using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Logging;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 
 using log4net;
 
 using SKBKontur.Cassandra.ClusterDeployment;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.FunctionalTests.Tests.RemoteLockTests
+namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
     [TestFixture]
     public abstract class RemoteLockTestBase

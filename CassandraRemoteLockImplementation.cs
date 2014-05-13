@@ -9,9 +9,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class CassandraRemoteLockImplementation : IRemoteLockImplementation
     {
-        public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ICassandraClusterSettings clusterSettings, ISerializer serializer, ColumnFamilyFullName columnFamilyFullName)
+        public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, ColumnFamilyFullName columnFamilyFullName)
         {
-            singleOperationTimeout = TimeSpan.FromMilliseconds(clusterSettings.Attempts * clusterSettings.Timeout);
+            var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
+            singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = TimeSpan.FromSeconds(60);
             lockRepository = new CassandraLockRepository(cassandraCluster, serializer, lockTtl, columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName);
         }

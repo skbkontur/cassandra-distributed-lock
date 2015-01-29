@@ -13,7 +13,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
             singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
-            lockTtl = TimeSpan.FromSeconds(60);
+            lockTtl = TimeSpan.FromMinutes(3);
             lockRepository = new CassandraLockRepository(cassandraCluster, serializer, lockTtl, columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName);
         }
 

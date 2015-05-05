@@ -77,10 +77,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
             //проверяем, что после всего мы в какой-то момент сможем-таки взять лок
             foreach(var remoteLockLocalManager in remoteLockLocalManagers)
-            {
                 Assert.That(!remoteLockLocalManager.CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
+
+            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
                 remoteLockLocalManager.Dispose();
-            }
         }
 
         protected void IncrementDecrementActionLock(RemoteLockCreator lockCreator, Random random)

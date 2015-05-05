@@ -3,25 +3,24 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 
+using GroboContainer.Core;
+using GroboContainer.Impl;
+
 using GroBuf;
 using GroBuf.DataMembersExtracters;
 
-using GroboContainer.Core;
-using GroboContainer.Impl;
+using log4net;
 
 using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
+using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Logging;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
-
-using log4net;
-
-using SKBKontur.Cassandra.ClusterDeployment;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -68,10 +67,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
         }
 
-        protected void AddThread(Action<Random> shortAction)
+        protected void AddThread(Action<RemoteLockCreator, Random> shortAction, RemoteLockCreator lockCreator)
         {
             var seed = Guid.NewGuid().GetHashCode();
-            var thread = new Thread(() => MakePeriodicAction(shortAction, seed));
+            var thread = new Thread(() => MakePeriodicAction(shortAction, seed, lockCreator));
             thread.Start();
             logger.InfoFormat("Add thread with seed = {0}", seed);
             threads.Add(thread);
@@ -106,9 +105,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             logger.Info("RunThreads. end");
         }
 
-        protected Container container;
-
-        private void MakePeriodicAction(Action<Random> shortAction, int seed)
+        private void MakePeriodicAction(Action<RemoteLockCreator, Random> shortAction, int seed, RemoteLockCreator lockCreator)
         {
             try
             {
@@ -117,7 +114,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 {
                     running.WaitOne();
                     Interlocked.Increment(ref runningThreads);
-                    shortAction(localRandom);
+                    shortAction(lockCreator, localRandom);
                     Interlocked.Decrement(ref runningThreads);
                 }
             }
@@ -127,11 +124,37 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        private readonly ManualResetEvent running = new ManualResetEvent(false);
-        private int runningThreads;
-        private volatile bool isEnd;
+        protected static RemoteLockCreator[] PrepareRemoteLockCreators(int threadCount, bool localRivalOptimization, CassandraRemoteLockImplementation remoteLockImplementation, out RemoteLockLocalManager[] remoteLockLocalManagers)
+        {
+            remoteLockLocalManagers = new RemoteLockLocalManager[threadCount];
+            var remoteLockCreators = new RemoteLockCreator[threadCount];
+            if(localRivalOptimization)
+            {
+                var singleManager = new RemoteLockLocalManager(remoteLockImplementation);
+                var singleLockCreator = new RemoteLockCreator(singleManager);
+                for(var i = 0; i < threadCount; i++)
+                {
+                    remoteLockLocalManagers[i] = singleManager;
+                    remoteLockCreators[i] = singleLockCreator;
+                }
+            }
+            else
+            {
+                for(var i = 0; i < threadCount; i++)
+                {
+                    var manager = new RemoteLockLocalManager(remoteLockImplementation);
+                    remoteLockLocalManagers[i] = manager;
+                    remoteLockCreators[i] = new RemoteLockCreator(manager);
+                }
+            }
+            return remoteLockCreators;
+        }
 
-        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteLockTestBase));
+        protected Container container;
+        private volatile bool isEnd;
+        private int runningThreads;
         private List<Thread> threads;
+        private readonly ManualResetEvent running = new ManualResetEvent(false);
+        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteLockTestBase));
     }
 }

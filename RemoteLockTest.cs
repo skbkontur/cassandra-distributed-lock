@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading;
 
+using log4net;
+
 using NUnit.Framework;
 
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-
-using log4net;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -14,8 +14,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public override void SetUp()
         {
             base.SetUp();
-            lockCreator = container.Get<RemoteLockCreator>();
             logger = LogManager.GetLogger(typeof(RemoteLockTest));
+            remoteLockImplementation = (CassandraRemoteLockImplementation)container.Get<IRemoteLockImplementation>();
         }
 
         [Test /*, Ignore("Очень жирный тест")*/]
@@ -44,18 +44,23 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         private void DoTestIncrementDecrementLock(int threadCount, int timeInterval, bool localRivalOptimization)
         {
-            useLocalRivalOptimization = localRivalOptimization;
+            RemoteLockLocalManager[] remoteLockLocalManagers;
+            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation, out remoteLockLocalManagers);
+
             for(var i = 0; i < threadCount; i++)
-                AddThread(IncrementDecrementAction);
+                AddThread(IncrementDecrementAction, remoteLockCreators[i]);
             RunThreads(timeInterval);
             JoinThreads();
+
+            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
+                remoteLockLocalManager.Dispose();
         }
 
-        private void IncrementDecrementAction(Random random)
+        private void IncrementDecrementAction(RemoteLockCreator lockCreator, Random random)
         {
             try
             {
-                var remoteLock = useLocalRivalOptimization ? lockCreator.Lock(lockId) : lockCreator.LockWithoutLocalRivalOptimization(lockId);
+                var remoteLock = lockCreator.Lock(lockId);
                 using(remoteLock)
                 {
                     logger.Info("MakeLock with threadId: " + remoteLock.ThreadId);
@@ -83,13 +88,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             try
             {
-                var lr = container.Get<IRemoteLockImplementation>() as CassandraRemoteLockImplementation;
-                var locks = lr.GetLockThreads(lockId);
+                var locks = remoteLockImplementation.GetLockThreads(lockId);
                 logger.Info("Locks: " + string.Join(", ", locks));
                 Assert.That(locks.Length <= 1, "Too many locks");
                 Assert.That(locks.Length == 1);
                 Assert.AreEqual(threadId, locks[0]);
-                var lockShades = lr.GetShadeThreads(lockId);
+                var lockShades = remoteLockImplementation.GetShadeThreads(lockId);
                 logger.Info("LockShades: " + string.Join(", ", lockShades));
             }
             catch(Exception e)
@@ -99,12 +103,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        private volatile bool useLocalRivalOptimization;
-
-        private int x;
-        private RemoteLockCreator lockCreator;
-        private ILog logger;
-
         private const string lockId = "IncDecLock";
+        private int x;
+        private ILog logger;
+        private CassandraRemoteLockImplementation remoteLockImplementation;
     }
 }

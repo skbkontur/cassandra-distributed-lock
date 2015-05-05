@@ -3,12 +3,12 @@ using System.Threading;
 
 using GroboContainer.Core;
 
+using log4net;
+
 using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-
-using log4net;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -59,29 +59,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public override void SetUp()
         {
             base.SetUp();
-            lockCreator = container.Get<RemoteLockCreator>();
             logger = LogManager.GetLogger(typeof(RemoteLockTest));
+            remoteLockImplementation = (CassandraRemoteLockImplementation)container.Get<IRemoteLockImplementation>();
         }
 
         protected void DoTestIncrementDecrementLock(int threadCount, int timeInterval, bool localRivalOptimization)
         {
-            useLocalRivalOptimization = localRivalOptimization;
+            RemoteLockLocalManager[] remoteLockLocalManagers;
+            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation, out remoteLockLocalManagers);
+
             for(var i = 0; i < threadCount / 2; i++)
-                AddThread(IncrementDecrementActionLock);
+                AddThread(IncrementDecrementActionLock, remoteLockCreators[i]);
             for(var i = threadCount / 2; i < threadCount; i++)
-                AddThread(IncrementDecrementActionWeakLock);
+                AddThread(IncrementDecrementActionWeakLock, remoteLockCreators[i]);
             RunThreads(timeInterval);
             JoinThreads();
 
             //проверяем, что после всего мы в какой-то момент сможем-таки взять лок
-            Assert.That(!WeakRemoteLock.CheckLocalLockUsed(lockId), "После остановки всех потоков осталась локальная блокировка");
+            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
+            {
+                Assert.That(!remoteLockLocalManager.CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
+                remoteLockLocalManager.Dispose();
+            }
         }
 
-        protected void IncrementDecrementActionLock(Random random)
+        protected void IncrementDecrementActionLock(RemoteLockCreator lockCreator, Random random)
         {
             try
             {
-                var remoteLock = useLocalRivalOptimization ? lockCreator.Lock(lockId) : lockCreator.LockWithoutLocalRivalOptimization(lockId);
+                var remoteLock = lockCreator.Lock(lockId);
                 using(remoteLock)
                 {
                     Thread.Sleep(random.Next(5000));
@@ -104,21 +110,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        protected void IncrementDecrementActionWeakLock(Random random)
+        protected void IncrementDecrementActionWeakLock(RemoteLockCreator lockCreator, Random random)
         {
             try
             {
                 IRemoteLock remoteLock;
-                if(useLocalRivalOptimization)
-                {
-                    if(!lockCreator.TryGetLock(lockId, out remoteLock))
-                        return;
-                }
-                else
-                {
-                    if(!lockCreator.TryGetLockWithoutLocalRivalOptimization(lockId, out remoteLock))
-                        return;
-                }
+                if(!lockCreator.TryGetLock(lockId, out remoteLock))
+                    return;
                 using(remoteLock)
                 {
                     Thread.Sleep(random.Next(5000));
@@ -131,7 +129,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     Interlocked.Decrement(ref x);
                 }
             }
-            catch (FailedCassanraClusterException e)
+            catch(FailedCassanraClusterException e)
             {
             }
             catch(Exception e)
@@ -150,16 +148,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             try
             {
-                var lr = container.Get<IRemoteLockImplementation>() as CassandraRemoteLockImplementation;
-                var locks = lr.GetLockThreads(lockId);
+                var locks = remoteLockImplementation.GetLockThreads(lockId);
                 logger.Info("Locks: " + string.Join(", ", locks));
                 Assert.That(locks.Length <= 1, "Too many locks");
                 Assert.That(locks.Length == 1);
                 Assert.AreEqual(threadId, locks[0]);
-                var lockShades = lr.GetShadeThreads(lockId);
+                var lockShades = remoteLockImplementation.GetShadeThreads(lockId);
                 logger.Info("LockShades: " + string.Join(", ", lockShades));
             }
-            catch (FailedCassanraClusterException e)
+            catch(FailedCassanraClusterException e)
             {
             }
             catch(Exception e)
@@ -169,13 +166,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        private volatile bool useLocalRivalOptimization;
-
-        private int x;
-        private RemoteLockCreator lockCreator;
-        private ILog logger;
-
         private const string lockId = "IncDecLock";
+        private int x;
+        private ILog logger;
+        private CassandraRemoteLockImplementation remoteLockImplementation;
     }
-    
 }

@@ -14,8 +14,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
             singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = TimeSpan.FromMinutes(3);
+            keepLockAliveInterval = TimeSpan.FromSeconds(15);
             lockRepository = new CassandraLockRepository(cassandraCluster, serializer, lockTtl, columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName);
         }
+
+        public TimeSpan KeepLockAliveInterval { get { return keepLockAliveInterval; } }
 
         public LockAttemptResult TryLock(string lockId, string threadId)
         {
@@ -84,5 +87,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly CassandraLockRepository lockRepository;
         private readonly TimeSpan singleOperationTimeout;
         private readonly TimeSpan lockTtl;
+        private readonly TimeSpan keepLockAliveInterval;
     }
 }

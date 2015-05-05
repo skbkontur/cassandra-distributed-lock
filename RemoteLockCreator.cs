@@ -1,49 +1,42 @@
-﻿namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+﻿using System;
+using System.Threading;
+
+using log4net;
+
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class RemoteLockCreator : IRemoteLockCreator
     {
-        public RemoteLockCreator(IRemoteLockImplementation remoteLockImplementation)
+        public RemoteLockCreator(IRemoteLockLocalManager remoteLockLocalManager)
         {
-            this.remoteLockImplementation = remoteLockImplementation;
+            this.remoteLockLocalManager = remoteLockLocalManager;
         }
 
         public IRemoteLock Lock(string lockId)
         {
-            return new RemoteLock(remoteLockImplementation, lockId);
+            var threadId = Guid.NewGuid().ToString();
+            var random = new Random(threadId.GetHashCode());
+            while(true)
+            {
+                string concurrentThreadId;
+                var remoteLock = remoteLockLocalManager.TryAcquireLock(lockId, threadId, out concurrentThreadId);
+                if(remoteLock != null)
+                    return remoteLock;
+                var longSleep = random.Next(1000);
+                logger.WarnFormat("Поток {0} не смог взять блокировку {1}, потому что поток {2} владеет ей в данный момент. Засыпаем на {3} миллисекунд.", threadId, lockId, concurrentThreadId, longSleep);
+                Thread.Sleep(longSleep);
+            }
         }
 
         public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
         {
             string concurrentThreadId;
-            var weakRemoteLock = new WeakRemoteLock(remoteLockImplementation, lockId, out concurrentThreadId);
-            remoteLock = weakRemoteLock;
-            return string.IsNullOrEmpty(concurrentThreadId);
+            var threadId = Guid.NewGuid().ToString();
+            remoteLock = remoteLockLocalManager.TryAcquireLock(lockId, threadId, out concurrentThreadId);
+            return remoteLock != null;
         }
 
-        /// <summary>
-        ///     Метод только для целей тестирования, им не нужно пользоваться. Поэтому его нет в интерфейсе
-        /// </summary>
-        /// <param name="lockId"></param>
-        /// <returns></returns>
-        public IRemoteLock LockWithoutLocalRivalOptimization(string lockId)
-        {
-            return new RemoteLock(remoteLockImplementation, lockId, localRivalOptimization : false);
-        }
-
-        /// <summary>
-        ///     Метод только для целей тестирования, им не нужно пользоваться. Поэтому его нет в интерфейсе
-        /// </summary>
-        /// <param name="lockId"></param>
-        /// <param name="remoteLock"></param>
-        /// <returns></returns>
-        public bool TryGetLockWithoutLocalRivalOptimization(string lockId, out IRemoteLock remoteLock)
-        {
-            string concurrentThreadId;
-            var weakRemoteLock = new WeakRemoteLock(remoteLockImplementation, lockId, out concurrentThreadId, localRivalsOptimization : false);
-            remoteLock = weakRemoteLock;
-            return string.IsNullOrEmpty(concurrentThreadId);
-        }
-
-        private readonly IRemoteLockImplementation remoteLockImplementation;
+        private readonly IRemoteLockLocalManager remoteLockLocalManager;
+        private readonly ILog logger = LogManager.GetLogger(typeof(RemoteLockCreator));
     }
 }

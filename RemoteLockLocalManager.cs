@@ -22,14 +22,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public void Dispose()
         {
-            lock(locker)
-            {
-                if(isDisposed)
-                    return;
-                remoteLocksQueue.CompleteAdding();
-                remoteLocksKeeperThread.Join();
-                isDisposed = true;
-            }
+            if(isDisposed)
+                return;
+            remoteLocksQueue.CompleteAdding();
+            remoteLocksKeeperThread.Join();
+            remoteLocksQueue.Dispose();
+            isDisposed = true;
         }
 
         public IRemoteLock TryAcquireLock(string lockId, string threadId, out string concurrentThreadId)
@@ -171,7 +169,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             }
         }
 
-        private bool isDisposed;
+        private volatile bool isDisposed;
         private readonly Thread remoteLocksKeeperThread;
         private readonly TimeSpan keepLockAliveInterval;
         private readonly IRemoteLockImplementation remoteLockImplementation;

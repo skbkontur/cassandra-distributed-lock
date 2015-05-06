@@ -106,7 +106,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     return null;
                 case LockAttemptStatus.ConcurrentAttempt:
                     var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 10)));
-                    logger.WarnFormat("Поток {0} не смог взять блокировку {1} из-за конкуррентной попытки других потоков. Засыпаем на {2} миллисекунд.", threadId, lockId, shortSleep);
+                    logger.WarnFormat("remoteLockImplementation.TryLock() returned LockAttemptStatus.ConcurrentAttempt for lockId: {0}, threadId: {1}. Will sleep for {2} ms", lockId, threadId, shortSleep);
                     Thread.Sleep(shortSleep);
                     break;
                 default:
@@ -166,18 +166,30 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             {
                 if(!remoteLockState.NextKeepAliveMoment.HasValue)
                     return;
-                try
-                {
-                    remoteLockImplementation.Relock(remoteLockState.LockId, remoteLockState.ThreadId);
-                }
-                catch(Exception e)
-                {
-                    logger.Error(string.Format("Failed to relock: {0}", remoteLockState), e);
-                }
+                Relock(remoteLockState);
                 if(!remoteLocksQueue.IsAddingCompleted)
                 {
                     remoteLockState.NextKeepAliveMoment = DateTime.UtcNow.Add(keepLockAliveInterval);
                     remoteLocksQueue.Add(remoteLockState);
+                }
+            }
+        }
+
+        private void Relock(RemoteLockState remoteLockState)
+        {
+            var attempt = 1;
+            while (true)
+            {
+                try
+                {
+                    remoteLockImplementation.Relock(remoteLockState.LockId, remoteLockState.ThreadId);
+                    break;
+                }
+                catch (Exception e)
+                {
+                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 10)));
+                    logger.Warn(string.Format("remoteLockImplementation.Relock() failed for: {0}. Will sleep for {1} ms", remoteLockState, shortSleep), e);
+                    Thread.Sleep(shortSleep);
                 }
             }
         }

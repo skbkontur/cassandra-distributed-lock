@@ -33,31 +33,25 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public IRemoteLock TryAcquireLock(string lockId, string threadId, out string concurrentThreadId)
         {
             ValidateArgs(lockId, threadId);
+            EnsureNotDisposed();
             lock(locker)
-            {
-                EnsureNotDisposed();
                 return DoTryAcquireLock(lockId, threadId, out concurrentThreadId);
-            }
         }
 
         public void ReleaseLock(string lockId, string threadId)
         {
             ValidateArgs(lockId, threadId);
+            EnsureNotDisposed();
             lock(locker)
-            {
-                EnsureNotDisposed();
                 DoReleaseLock(lockId, threadId);
-            }
         }
 
         [Obsolete("Только для тестов")]
         public bool CheckLockIsAcquiredLocally(string lockId)
         {
+            EnsureNotDisposed();
             lock(locker)
-            {
-                EnsureNotDisposed();
                 return remoteLocksById.ContainsKey(lockId);
-            }
         }
 
         private static void ValidateArgs(string lockId, string threadId)

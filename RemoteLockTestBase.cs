@@ -16,7 +16,6 @@ using NUnit.Framework;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Logging;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
@@ -46,7 +45,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             ConfigureContainer(container);
             var cassandraClusterSettings = StartSingleCassandraSetUp.Node.CreateSettings(IPAddress.Loopback);
             container.Configurator.ForAbstraction<ICassandraClusterSettings>().UseInstances(cassandraClusterSettings);
-            var remoteLockImplementation = container.Create<ColumnFamilyFullName, CassandraRemoteLockImplementation>(ColumnFamilies.remoteLock);
+            var remoteLockImplementation = container.Create<CassandraRemoteLockImplementationSettings, CassandraRemoteLockImplementation>(new CassandraRemoteLockImplementationSettings
+                {
+                    ColumnFamilyFullName = ColumnFamilies.remoteLock,
+                    LockTtl = TimeSpan.FromMinutes(3),
+                    KeepLockAliveInterval = TimeSpan.FromSeconds(15),
+                });
             container.Configurator.ForAbstraction<IRemoteLockImplementation>().UseInstances(remoteLockImplementation);
 
             logger.InfoFormat("Start SetUp, runningThreads = {0}", runningThreads);

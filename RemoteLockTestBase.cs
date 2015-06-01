@@ -17,7 +17,6 @@ using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Logging;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 
@@ -38,7 +37,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [SetUp]
         public virtual void SetUp()
         {
-            Log4NetConfiguration.InitializeOnce();
             var assemblies = AssembliesLoader.Load();
             container = new Container(new ContainerConfiguration(assemblies));
             container.Configurator.ForAbstraction<ISerializer>().UseInstances(new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead));

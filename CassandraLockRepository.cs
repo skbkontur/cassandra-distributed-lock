@@ -13,11 +13,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal class CassandraLockRepository
     {
-        public CassandraLockRepository(ICassandraCluster cassandraCluster, ISerializer serializer, TimeSpan lockTtl, ColumnFamilyFullName columnFamilyFullName)
+        public CassandraLockRepository(ICassandraCluster cassandraCluster, ISerializer serializer, ColumnFamilyFullName columnFamilyFullName)
         {
             this.cassandraCluster = cassandraCluster;
             this.serializer = serializer;
-            this.lockTtl = lockTtl;
             this.columnFamilyFullName = columnFamilyFullName;
         }
 
@@ -36,12 +35,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             Delete(GetMainRowKey(lockRowId), threadId);
         }
 
-        public void RelockRow(string lockRowId, string threadId)
+        public void RelockRow(string lockRowId, string threadId, TimeSpan lockTtl)
         {
-            WriteLockRow(GetMainRowKey(lockRowId), threadId);
+            WriteLockRow(GetMainRowKey(lockRowId), threadId, lockTtl);
         }
 
-        public LockAttemptResult TryLock(string lockId, string threadId, TimeSpan ttl)
+        public LockAttemptResult TryLock(string lockId, string threadId, TimeSpan lockTtl, TimeSpan ttl)
         {
             var items = GetThreadsInLockRow(lockId);
             if(items.Length == 1)
@@ -56,7 +55,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var beforeOurWriteShades = GetShadowThreadsInLockRow(lockId);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteLockRow(GetShadowRowKey(lockId), threadId);
+            WriteLockRow(GetShadowRowKey(lockId), threadId, lockTtl);
             var shades = GetShadowThreadsInLockRow(lockId);
             if(shades.Length == 1)
             {
@@ -155,14 +154,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return "Metadata_" + lockId;
         }
 
-        private void WriteLockRow(string rowName, string threadId, TimeSpan? ttl = null)
+        private void WriteLockRow(string rowName, string threadId, TimeSpan ttl)
         {
             MakeInConnection(connection => connection.AddColumn(rowName, new Column
                 {
                     Name = threadId,
                     Value = new byte[] {0},
                     Timestamp = GetNowTicks(),
-                    TTL = (int?)ttl.GetValueOrDefault(lockTtl).TotalSeconds
+                    TTL = (int?)ttl.TotalSeconds
                 }));
         }
 
@@ -203,7 +202,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private readonly ICassandraCluster cassandraCluster;
         private readonly ISerializer serializer;
-        private readonly TimeSpan lockTtl;
         private readonly ColumnFamilyFullName columnFamilyFullName;
         private long lastTicks;
     }

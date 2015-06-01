@@ -7,18 +7,18 @@ using GroBuf;
 using SKBKontur.Cassandra.CassandraClient.Abstractions;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.CassandraClient.Connections;
+using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal class CassandraLockRepository
     {
-        public CassandraLockRepository(ICassandraCluster cassandraCluster, ISerializer serializer, TimeSpan lockTTL, string keyspace, string columnFamily)
+        public CassandraLockRepository(ICassandraCluster cassandraCluster, ISerializer serializer, TimeSpan lockTtl, ColumnFamilyFullName columnFamilyFullName)
         {
             this.cassandraCluster = cassandraCluster;
             this.serializer = serializer;
-            this.lockTTL = lockTTL;
-            this.keyspace = keyspace;
-            this.columnFamily = columnFamily;
+            this.lockTtl = lockTtl;
+            this.columnFamilyFullName = columnFamilyFullName;
         }
 
         public string[] GetThreadsInLockRow(string lockRowId)
@@ -72,7 +72,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return LockAttemptResult.ConcurrentAttempt();
         }
 
-        public void UpdateLockRowTTL(string lockRowId, string threadId, TimeSpan ttl)
+        public void UpdateLockRowTtl(string lockRowId, string threadId, TimeSpan ttl)
         {
             WriteLockRow(GetMainRowKey(lockRowId), threadId, ttl);
         }
@@ -131,26 +131,26 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                         res = new LockMetadata
                             {
                                 LockCount = serializer.Deserialize<int>(columns.First(x => x.Name == "LockCount").Value),
-                                LockRowId = columns.Any(x => x.Name == "LockRowId") 
-                                    ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value) 
-                                    : defaultLockRowId,
+                                LockRowId = columns.Any(x => x.Name == "LockRowId")
+                                                ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
+                                                : defaultLockRowId,
                             };
                     }
                 });
             return res;
         }
 
-        private string GetShadowRowKey(string lockId)
+        private static string GetShadowRowKey(string lockId)
         {
             return "Shade_" + lockId;
         }
 
-        private string GetMainRowKey(string lockId)
+        private static string GetMainRowKey(string lockId)
         {
             return "Main_" + lockId;
         }
 
-        private string GetLockMetadataRowKey(string lockId)
+        private static string GetLockMetadataRowKey(string lockId)
         {
             return "Metadata_" + lockId;
         }
@@ -162,7 +162,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     Name = threadId,
                     Value = new byte[] {0},
                     Timestamp = GetNowTicks(),
-                    TTL = (int?)ttl.GetValueOrDefault(lockTTL).TotalSeconds
+                    TTL = (int?)ttl.GetValueOrDefault(lockTtl).TotalSeconds
                 }));
         }
 
@@ -192,7 +192,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)
         {
-            var connection = cassandraCluster.RetrieveColumnFamilyConnection(keyspace, columnFamily);
+            var connection = cassandraCluster.RetrieveColumnFamilyConnection(columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName);
             action(connection);
         }
 
@@ -203,10 +203,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private readonly ICassandraCluster cassandraCluster;
         private readonly ISerializer serializer;
-        private readonly TimeSpan lockTTL;
-        private readonly string keyspace;
-        private readonly string columnFamily;
-
+        private readonly TimeSpan lockTtl;
+        private readonly ColumnFamilyFullName columnFamilyFullName;
         private long lastTicks;
     }
 }

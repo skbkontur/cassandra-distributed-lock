@@ -46,6 +46,7 @@
     <Compile Include="BoundedBlockingQueue.cs" />
     <Compile Include="CassandraLockRepository.cs" />
     <Compile Include="CassandraRemoteLockImplementation.cs" />
+    <Compile Include="CassandraRemoteLockImplementationSettings.cs" />
     <Compile Include="IRemoteLock.cs" />
     <Compile Include="IRemoteLockCreator.cs" />
     <Compile Include="IRemoteLockImplementation.cs" />

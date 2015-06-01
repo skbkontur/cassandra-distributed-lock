@@ -178,14 +178,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private void Relock(RemoteLockState remoteLockState)
         {
             var attempt = 1;
-            while (true)
+            while(true)
             {
                 try
                 {
                     remoteLockImplementation.Relock(remoteLockState.LockId, remoteLockState.ThreadId);
                     break;
                 }
-                catch (Exception e)
+                catch(Exception e)
                 {
                     var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 10)));
                     logger.Warn(string.Format("remoteLockImplementation.Relock() failed for: {0}. Will sleep for {1} ms", remoteLockState, shortSleep), e);

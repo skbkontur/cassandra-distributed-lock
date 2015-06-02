@@ -100,7 +100,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     Interlocked.Decrement(ref x);
                 }
             }
-            catch(FailedCassanraClusterException e)
+            catch(FailedCassanraClusterException)
             {
             }
             catch(Exception e)
@@ -129,7 +129,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     Interlocked.Decrement(ref x);
                 }
             }
-            catch(FailedCassanraClusterException e)
+            catch(FailedCassanraClusterException)
             {
             }
             catch(Exception e)
@@ -156,7 +156,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 var lockShades = remoteLockImplementation.GetShadeThreads(lockId);
                 logger.Info("LockShades: " + string.Join(", ", lockShades));
             }
-            catch(FailedCassanraClusterException e)
+            catch(FailedCassanraClusterException)
             {
             }
             catch(Exception e)

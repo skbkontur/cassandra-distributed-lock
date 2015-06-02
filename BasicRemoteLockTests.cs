@@ -3,14 +3,24 @@ using System.Threading;
 
 using NUnit.Framework;
 
+using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
     [TestFixture]
     public class BasicRemoteLockTests
     {
+        [TestFixtureSetUp]
+        public void TestFixtureSetUp()
+        {
+            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
+            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
+            cassandraSchemeActualizer.AddNewColumnFamilies();
+        }
+
         [Test]
         public void TryLock_SingleLockId()
         {
@@ -65,17 +75,23 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [Test]
         public void LockIsKeptAlive_Success()
         {
-            var cassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts: 1, timeout: TimeSpan.FromSeconds(1));
-            using (var remoteLockTester1 = new RemoteLockTester(cassandraClusterSettings, lockTtl: TimeSpan.FromSeconds(10), keepLockAliveInterval: TimeSpan.FromSeconds(5)))
-            using (var remoteLockTester2 = new RemoteLockTester(cassandraClusterSettings, lockTtl: TimeSpan.FromSeconds(10), keepLockAliveInterval: TimeSpan.FromSeconds(5)))
+            var config = new RemoteLockTesterConfig
+                {
+                    LockCreatorsCount = 2,
+                    LocalRivalOptimization = LocalRivalOptimization.Disabled,
+                    LockTtl = TimeSpan.FromSeconds(10),
+                    KeepLockAliveInterval = TimeSpan.FromSeconds(5),
+                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                };
+            using(var remoteLockTester = new RemoteLockTester(config))
             {
                 var lockId = Guid.NewGuid().ToString();
-                var lock1 = remoteLockTester1.Lock(lockId);
+                var lock1 = remoteLockTester[0].Lock(lockId);
                 Thread.Sleep(TimeSpan.FromSeconds(12)); // waiting in total: 12 = 1*1 + 10 + 1 sec
                 IRemoteLock lock2;
-                Assert.That(remoteLockTester2.TryGetLock(lockId, out lock2), Is.False);
+                Assert.That(remoteLockTester[1].TryGetLock(lockId, out lock2), Is.False);
                 lock1.Dispose();
-                Assert.That(remoteLockTester2.TryGetLock(lockId, out lock2), Is.True);
+                Assert.That(remoteLockTester[1].TryGetLock(lockId, out lock2), Is.True);
                 lock2.Dispose();
             }
         }
@@ -83,17 +99,23 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [Test]
         public void LockIsKeptAlive_Failure()
         {
-            var cassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1));
-            using(var remoteLockTester1 = new RemoteLockTester(cassandraClusterSettings, lockTtl : TimeSpan.FromSeconds(5), keepLockAliveInterval : TimeSpan.FromSeconds(10)))
-            using(var remoteLockTester2 = new RemoteLockTester(cassandraClusterSettings, lockTtl : TimeSpan.FromSeconds(5), keepLockAliveInterval : TimeSpan.FromSeconds(10)))
+            var config = new RemoteLockTesterConfig
+                {
+                    LockCreatorsCount = 2,
+                    LocalRivalOptimization = LocalRivalOptimization.Disabled,
+                    LockTtl = TimeSpan.FromSeconds(5),
+                    KeepLockAliveInterval = TimeSpan.FromSeconds(10),
+                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                };
+            using(var remoteLockTester = new RemoteLockTester(config))
             {
                 var lockId = Guid.NewGuid().ToString();
-                var lock1 = remoteLockTester1.Lock(lockId);
+                var lock1 = remoteLockTester[0].Lock(lockId);
                 Thread.Sleep(TimeSpan.FromSeconds(3));
                 IRemoteLock lock2;
-                Assert.That(remoteLockTester2.TryGetLock(lockId, out lock2), Is.False);
+                Assert.That(remoteLockTester[1].TryGetLock(lockId, out lock2), Is.False);
                 Thread.Sleep(TimeSpan.FromSeconds(4)); // waiting in total: 3 + 4 = 1*1 + 5 + 1 sec
-                Assert.That(remoteLockTester2.TryGetLock(lockId, out lock2), Is.True);
+                Assert.That(remoteLockTester[1].TryGetLock(lockId, out lock2), Is.True);
                 lock2.Dispose();
                 lock1.Dispose();
             }

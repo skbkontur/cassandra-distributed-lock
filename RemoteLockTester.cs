@@ -1,5 +1,5 @@
 using System;
-using System.Net;
+using System.Linq;
 
 using GroBuf;
 using GroBuf.DataMembersExtracters;
@@ -7,46 +7,69 @@ using GroBuf.DataMembersExtracters;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
     public class RemoteLockTester : IDisposable, IRemoteLockCreator
     {
-        public RemoteLockTester(ICassandraClusterSettings cassandraClusterSettings = null, TimeSpan? lockTtl = null, TimeSpan? keepLockAliveInterval = null)
+        public RemoteLockTester(RemoteLockTesterConfig config = null)
         {
-            cassandraClusterSettings = cassandraClusterSettings ?? CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node);
-            var cassandraCluster = new CassandraCluster(cassandraClusterSettings);
-            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
-            cassandraSchemeActualizer.AddNewColumnFamilies();
+            config = config ?? new RemoteLockTesterConfig();
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
+            var cassandraCluster = new CassandraCluster(config.CassandraClusterSettings ?? CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
             var cassandraRemoteLockImplementationSettings = new CassandraRemoteLockImplementationSettings
                 {
                     ColumnFamilyFullName = ColumnFamilies.remoteLock,
-                    LockTtl = lockTtl ?? TimeSpan.FromSeconds(10),
-                    KeepLockAliveInterval = keepLockAliveInterval ?? TimeSpan.FromSeconds(2),
+                    LockTtl = config.LockTtl ?? TimeSpan.FromSeconds(10),
+                    KeepLockAliveInterval = config.KeepLockAliveInterval ?? TimeSpan.FromSeconds(2),
                 };
             var remoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, cassandraRemoteLockImplementationSettings);
-            remoteLockLocalManager = new RemoteLockLocalManager(remoteLockImplementation);
-            remoteLockCreator = new RemoteLockCreator(remoteLockLocalManager);
+            var lockCreatorsCount = config.LockCreatorsCount ?? 1;
+            remoteLockLocalManagers = new RemoteLockLocalManager[lockCreatorsCount];
+            remoteLockCreators = new RemoteLockCreator[lockCreatorsCount];
+            switch(config.LocalRivalOptimization)
+            {
+            case null:
+            case LocalRivalOptimization.Enabled:
+                var remoteLockLocalManager = new RemoteLockLocalManager(remoteLockImplementation);
+                var remoteLockCreator = new RemoteLockCreator(remoteLockLocalManager);
+                for(var i = 0; i < lockCreatorsCount; i++)
+                {
+                    remoteLockLocalManagers[i] = remoteLockLocalManager;
+                    remoteLockCreators[i] = remoteLockCreator;
+                }
+                break;
+            case LocalRivalOptimization.Disabled:
+                for(var i = 0; i < lockCreatorsCount; i++)
+                {
+                    remoteLockLocalManagers[i] = new RemoteLockLocalManager(remoteLockImplementation);
+                    remoteLockCreators[i] = new RemoteLockCreator(remoteLockLocalManagers[i]);
+                }
+                break;
+            default:
+                throw new InvalidOperationException(string.Format("Invalid localRivalOptimization: {0}", config.LocalRivalOptimization));
+            }
         }
 
         public void Dispose()
         {
-            remoteLockLocalManager.Dispose();
+            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
+                remoteLockLocalManager.Dispose();
         }
+
+        public IRemoteLockCreator this[int index] { get { return remoteLockCreators[index]; } }
 
         public IRemoteLock Lock(string lockId)
         {
-            return remoteLockCreator.Lock(lockId);
+            return remoteLockCreators.Single().Lock(lockId);
         }
 
         public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
         {
-            return remoteLockCreator.TryGetLock(lockId, out remoteLock);
+            return remoteLockCreators.Single().TryGetLock(lockId, out remoteLock);
         }
 
-        private readonly RemoteLockCreator remoteLockCreator;
-        private readonly RemoteLockLocalManager remoteLockLocalManager;
+        private readonly RemoteLockCreator[] remoteLockCreators;
+        private readonly RemoteLockLocalManager[] remoteLockLocalManagers;
     }
 }

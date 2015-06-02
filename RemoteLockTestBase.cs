@@ -43,12 +43,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             ConfigureContainer(container);
             var cassandraClusterSettings = StartSingleCassandraSetUp.Node.CreateSettings(IPAddress.Loopback);
             container.Configurator.ForAbstraction<ICassandraClusterSettings>().UseInstances(cassandraClusterSettings);
-            var remoteLockImplementation = container.Create<CassandraRemoteLockImplementationSettings, CassandraRemoteLockImplementation>(new CassandraRemoteLockImplementationSettings
-                {
-                    ColumnFamilyFullName = ColumnFamilies.remoteLock,
-                    LockTtl = TimeSpan.FromMinutes(3),
-                    KeepLockAliveInterval = TimeSpan.FromSeconds(15),
-                });
+            var remoteLockImplementation = container.Create<CassandraRemoteLockImplementationSettings, CassandraRemoteLockImplementation>(CassandraRemoteLockImplementationSettings.Default(ColumnFamilies.remoteLock));
             container.Configurator.ForAbstraction<IRemoteLockImplementation>().UseInstances(remoteLockImplementation);
 
             logger.InfoFormat("Start SetUp, runningThreads = {0}", runningThreads);

@@ -17,13 +17,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [Test]
         public void TestIncrementDecrementLock()
         {
-            DoTestIncrementDecrementLock(10, 10000, true);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), true);
         }
 
         [Test]
         public void TestIncrementDecrementLockWithoutLocalRivalOptimization()
         {
-            DoTestIncrementDecrementLock(10, 10000, false);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), false);
         }
 
         protected override void ConfigureContainer(IContainer c)
@@ -38,19 +38,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [Test, Ignore("Очень жирный тест")]
         public void StressTest()
         {
-            DoTestIncrementDecrementLock(60, 60000, true);
+            DoTestIncrementDecrementLock(60, TimeSpan.FromSeconds(60), true);
         }
 
         [Test]
         public void TestIncrementDecrementLock()
         {
-            DoTestIncrementDecrementLock(10, 10000, true);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), true);
         }
 
         [Test]
         public void TestIncrementDecrementLockWithoutLocalRivalOptimization()
         {
-            DoTestIncrementDecrementLock(10, 10000, false);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), false);
         }
     }
 
@@ -63,7 +63,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             remoteLockImplementation = (CassandraRemoteLockImplementation)container.Get<IRemoteLockImplementation>();
         }
 
-        protected void DoTestIncrementDecrementLock(int threadCount, int timeInterval, bool localRivalOptimization)
+        protected void DoTestIncrementDecrementLock(int threadCount, TimeSpan runningTimeInterval, bool localRivalOptimization)
         {
             RemoteLockLocalManager[] remoteLockLocalManagers;
             var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation, out remoteLockLocalManagers);
@@ -72,7 +72,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 AddThread(IncrementDecrementActionLock, remoteLockCreators[i]);
             for(var i = threadCount / 2; i < threadCount; i++)
                 AddThread(IncrementDecrementActionWeakLock, remoteLockCreators[i]);
-            RunThreads(timeInterval);
+            RunThreads(runningTimeInterval);
             JoinThreads();
 
             //проверяем, что после всего мы в какой-то момент сможем-таки взять лок

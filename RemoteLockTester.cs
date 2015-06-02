@@ -5,7 +5,6 @@ using GroBuf;
 using GroBuf.DataMembersExtracters;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
-using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
@@ -16,7 +15,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
     {
         public RemoteLockTester(ICassandraClusterSettings cassandraClusterSettings = null, TimeSpan? lockTtl = null, TimeSpan? keepLockAliveInterval = null)
         {
-            cassandraClusterSettings = cassandraClusterSettings ?? StartSingleCassandraSetUp.Node.CreateSettings(IPAddress.Loopback);
+            cassandraClusterSettings = cassandraClusterSettings ?? CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node);
             var cassandraCluster = new CassandraCluster(cassandraClusterSettings);
             var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
             cassandraSchemeActualizer.AddNewColumnFamilies();

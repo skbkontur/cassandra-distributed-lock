@@ -88,11 +88,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             logger.Info("JoinThreads. end");
         }
 
-        protected void RunThreads(int timeInterval = 1000)
+        protected void RunThreads(TimeSpan runningTimeInterval)
         {
             logger.InfoFormat("RunThreads. begin, runningThreads = {0}", runningThreads);
             running.Set();
-            Thread.Sleep(timeInterval);
+            Thread.Sleep(runningTimeInterval);
             running.Reset();
             while(Interlocked.CompareExchange(ref runningThreads, 0, 0) != 0)
             {

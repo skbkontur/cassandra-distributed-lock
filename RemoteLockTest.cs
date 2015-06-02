@@ -21,35 +21,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [Test /*, Ignore("Очень жирный тест")*/]
         public void StressTest()
         {
-            DoTestIncrementDecrementLock(30, 60000, true);
+            DoTestIncrementDecrementLock(30, TimeSpan.FromSeconds(60), true);
         }
 
         [Test /*, Ignore("Очень жирный тест")*/]
         public void StressTestWithoutLocalRivalOptimization()
         {
-            DoTestIncrementDecrementLock(30, 60000, false);
+            DoTestIncrementDecrementLock(30, TimeSpan.FromSeconds(60), false);
         }
 
         [Test]
         public void TestIncrementDecrementLock()
         {
-            DoTestIncrementDecrementLock(10, 10000, true);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), true);
         }
 
         [Test]
         public void TestIncrementDecrementWithoutLocalRivalOptimization()
         {
-            DoTestIncrementDecrementLock(10, 10000, false);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), false);
         }
 
-        private void DoTestIncrementDecrementLock(int threadCount, int timeInterval, bool localRivalOptimization)
+        private void DoTestIncrementDecrementLock(int threadCount, TimeSpan runningTimeInterval, bool localRivalOptimization)
         {
             RemoteLockLocalManager[] remoteLockLocalManagers;
             var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation, out remoteLockLocalManagers);
 
             for(var i = 0; i < threadCount; i++)
                 AddThread(IncrementDecrementAction, remoteLockCreators[i]);
-            RunThreads(timeInterval);
+            RunThreads(runningTimeInterval);
             JoinThreads();
 
             foreach(var remoteLockLocalManager in remoteLockLocalManagers)

@@ -37,10 +37,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             ValidateArgs(lockId, threadId);
             EnsureNotDisposed();
-            IRemoteLock remoteLock;
             var sw = Stopwatch.StartNew();
-            lock(locker)
-                remoteLock = DoTryAcquireLock(lockId, threadId, out concurrentThreadId);
+            var remoteLock = DoTryAcquireLock(lockId, threadId, out concurrentThreadId);
             sw.Stop();
             if(sw.Elapsed > synchronizedOperationWarnThreshold)
                 logger.ErrorFormat("DoTryAcquireLock() took {0} ms for lockId: {1}, threadId: {2}. TotalFreezeEventsCount: {3}", sw.ElapsedMilliseconds, lockId, threadId, Interlocked.Increment(ref freezeEventsCount));
@@ -52,8 +50,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             ValidateArgs(lockId, threadId);
             EnsureNotDisposed();
             var sw = Stopwatch.StartNew();
-            lock(locker)
-                DoReleaseLock(lockId, threadId);
+            DoReleaseLock(lockId, threadId);
             sw.Stop();
             if(sw.Elapsed > synchronizedOperationWarnThreshold)
                 logger.ErrorFormat("DoReleaseLock() took {0} ms for lockId: {1}, threadId: {2}. TotalFreezeEventsCount: {3}", sw.ElapsedMilliseconds, lockId, threadId, Interlocked.Increment(ref freezeEventsCount));
@@ -83,11 +80,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private IRemoteLock DoTryAcquireLock(string lockId, string threadId, out string rivalThreadId)
         {
-            RemoteLockState rival;
-            if(remoteLocksById.TryGetValue(lockId, out rival))
+            lock(locker)
             {
-                rivalThreadId = rival.ThreadId;
-                return null;
+                RemoteLockState rival;
+                if(remoteLocksById.TryGetValue(lockId, out rival))
+                {
+                    rivalThreadId = rival.ThreadId;
+                    return null;
+                }
             }
             var attempt = 1;
             while(true)
@@ -97,8 +97,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 {
                 case LockAttemptStatus.Success:
                     rivalThreadId = null;
-                    var remoteLockState = new RemoteLockState(lockId, threadId, locker, DateTime.UtcNow.Add(keepLockAliveInterval));
-                    remoteLocksById.Add(lockId, remoteLockState);
+                    var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
+                    lock(locker)
+                        remoteLocksById.Add(lockId, remoteLockState);
                     remoteLocksQueue.Add(remoteLockState);
                     return new RemoteLockHandle(lockId, threadId, this);
                 case LockAttemptStatus.AnotherThreadIsOwner:
@@ -118,11 +119,30 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private void DoReleaseLock(string lockId, string threadId)
         {
             RemoteLockState remoteLockState;
-            if(!remoteLocksById.TryGetValue(lockId, out remoteLockState) || remoteLockState.ThreadId != threadId)
-                throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
-            remoteLockState.NextKeepAliveMoment = null;
-            remoteLocksById.Remove(lockId);
-            remoteLockImplementation.Unlock(lockId, threadId);
+            lock(locker)
+            {
+                if(!remoteLocksById.TryGetValue(lockId, out remoteLockState) || remoteLockState.ThreadId != threadId)
+                    throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
+            }
+            Unlock(remoteLockState);
+            lock(locker)
+                remoteLocksById.Remove(lockId);
+        }
+
+        private void Unlock(RemoteLockState remoteLockState)
+        {
+            lock(remoteLockState)
+            {
+                remoteLockState.NextKeepAliveMoment = null;
+                try
+                {
+                    remoteLockImplementation.Unlock(remoteLockState.LockId, remoteLockState.ThreadId);
+                }
+                catch(Exception e)
+                {
+                    logger.Error(string.Format("remoteLockImplementation.Unlock() failed for: {0}", remoteLockState), e);
+                }
+            }
         }
 
         private void KeepRemoteLocksAlive()
@@ -151,7 +171,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private void ProcessRemoteLocksQueueItem(RemoteLockState remoteLockState)
         {
             TimeSpan? timeToSleep = null;
-            lock(remoteLockState.ManagerLocker)
+            lock(remoteLockState)
             {
                 var nextKeepAliveMoment = remoteLockState.NextKeepAliveMoment;
                 if(!nextKeepAliveMoment.HasValue)
@@ -162,7 +182,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             }
             if(timeToSleep.HasValue)
                 Thread.Sleep(timeToSleep.Value);
-            lock(remoteLockState.ManagerLocker)
+            lock(remoteLockState)
             {
                 if(!remoteLockState.NextKeepAliveMoment.HasValue)
                     return;
@@ -208,17 +228,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private class RemoteLockState
         {
-            public RemoteLockState(string lockId, string threadId, object managerLocker, DateTime nextKeepAliveMoment)
+            public RemoteLockState(string lockId, string threadId, DateTime nextKeepAliveMoment)
             {
                 LockId = lockId;
                 ThreadId = threadId;
-                ManagerLocker = managerLocker;
                 NextKeepAliveMoment = nextKeepAliveMoment;
             }
 
             public string LockId { get; private set; }
             public string ThreadId { get; private set; }
-            public object ManagerLocker { get; private set; }
             public DateTime? NextKeepAliveMoment { get; set; }
 
             public override string ToString()

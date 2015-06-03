@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 
@@ -60,8 +60,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public bool CheckLockIsAcquiredLocally(string lockId)
         {
             EnsureNotDisposed();
-            lock(locker)
-                return remoteLocksById.ContainsKey(lockId);
+            return remoteLocksById.ContainsKey(lockId);
         }
 
         private static void ValidateArgs(string lockId, string threadId)
@@ -80,14 +79,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private IRemoteLock DoTryAcquireLock(string lockId, string threadId, out string rivalThreadId)
         {
-            lock(locker)
+            RemoteLockState rival;
+            if(remoteLocksById.TryGetValue(lockId, out rival))
             {
-                RemoteLockState rival;
-                if(remoteLocksById.TryGetValue(lockId, out rival))
-                {
-                    rivalThreadId = rival.ThreadId;
-                    return null;
-                }
+                rivalThreadId = rival.ThreadId;
+                return null;
             }
             var attempt = 1;
             while(true)
@@ -98,8 +94,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 case LockAttemptStatus.Success:
                     rivalThreadId = null;
                     var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
-                    lock(locker)
-                        remoteLocksById.Add(lockId, remoteLockState);
+                    if(!remoteLocksById.TryAdd(lockId, remoteLockState))
+                        throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
                     remoteLocksQueue.Add(remoteLockState);
                     return new RemoteLockHandle(lockId, threadId, this);
                 case LockAttemptStatus.AnotherThreadIsOwner:
@@ -119,14 +115,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private void DoReleaseLock(string lockId, string threadId)
         {
             RemoteLockState remoteLockState;
-            lock(locker)
-            {
-                if(!remoteLocksById.TryGetValue(lockId, out remoteLockState) || remoteLockState.ThreadId != threadId)
-                    throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
-            }
+            if(!remoteLocksById.TryRemove(lockId, out remoteLockState) || remoteLockState.ThreadId != threadId)
+                throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
             Unlock(remoteLockState);
-            lock(locker)
-                remoteLocksById.Remove(lockId);
         }
 
         private void Unlock(RemoteLockState remoteLockState)
@@ -220,10 +211,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly TimeSpan keepLockAliveInterval;
         private readonly TimeSpan synchronizedOperationWarnThreshold;
         private readonly IRemoteLockImplementation remoteLockImplementation;
-        private readonly object locker = new object();
         private readonly Random random = new Random(Guid.NewGuid().GetHashCode());
         private readonly ILog logger = LogManager.GetLogger(typeof(RemoteLockLocalManager));
-        private readonly Dictionary<string, RemoteLockState> remoteLocksById = new Dictionary<string, RemoteLockState>();
+        private readonly ConcurrentDictionary<string, RemoteLockState> remoteLocksById = new ConcurrentDictionary<string, RemoteLockState>();
         private readonly BoundedBlockingQueue<RemoteLockState> remoteLocksQueue = new BoundedBlockingQueue<RemoteLockState>(int.MaxValue);
 
         private class RemoteLockState

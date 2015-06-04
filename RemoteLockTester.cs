@@ -4,6 +4,9 @@ using System.Linq;
 using GroBuf;
 using GroBuf.DataMembersExtracters;
 
+using Metrics;
+using Metrics.Reporters;
+
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
@@ -55,6 +58,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             foreach(var remoteLockLocalManager in remoteLockLocalManagers)
                 remoteLockLocalManager.Dispose();
+            LogRemoteLockerPerfStat();
+        }
+
+        private static void LogRemoteLockerPerfStat()
+        {
+            var metricsData = Metric.Context("RemoteLocker").DataProvider.CurrentMetricsData;
+            var metricsReport = StringReport.RenderMetrics(metricsData, () => new HealthStatus());
+            Console.Out.WriteLine(metricsReport);
         }
 
         public IRemoteLockCreator this[int index] { get { return remoteLockCreators[index]; } }

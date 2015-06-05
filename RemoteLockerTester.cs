@@ -16,9 +16,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 {
     public class RemoteLockerTester : IDisposable, IRemoteLockCreator
     {
-        public RemoteLockerTester(RemoteLockerTesterConfig config = null)
+        public RemoteLockerTester(bool useSingleLockKeeperThread = true, RemoteLockerTesterConfig config = null)
         {
             config = config ?? new RemoteLockerTesterConfig();
+            this.useSingleLockKeeperThread = useSingleLockKeeperThread;
+            localRivalOptimizationIsEnabled = config.LocalRivalOptimization != LocalRivalOptimization.Disabled;
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
             var cassandraCluster = new CassandraCluster(config.CassandraClusterSettings ?? CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
             var cassandraRemoteLockImplementationSettings = new CassandraRemoteLockImplementationSettings
@@ -30,28 +32,32 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var remoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, cassandraRemoteLockImplementationSettings);
             var lockCreatorsCount = config.LockCreatorsCount ?? 1;
             remoteLockers = new RemoteLocker[lockCreatorsCount];
-            switch(config.LocalRivalOptimization)
+            if(useSingleLockKeeperThread)
             {
-            case null:
-            case LocalRivalOptimization.Enabled:
-                var remoteLocker = new RemoteLocker(remoteLockImplementation);
-                for(var i = 0; i < lockCreatorsCount; i++)
-                    remoteLockers[i] = remoteLocker;
-                break;
-            case LocalRivalOptimization.Disabled:
-                for(var i = 0; i < lockCreatorsCount; i++)
-                    remoteLockers[i] = new RemoteLocker(remoteLockImplementation);
-                break;
-            default:
-                throw new InvalidOperationException(string.Format("Invalid localRivalOptimization: {0}", config.LocalRivalOptimization));
+                if(localRivalOptimizationIsEnabled)
+                {
+                    var remoteLocker = new RemoteLocker(remoteLockImplementation);
+                    for(var i = 0; i < lockCreatorsCount; i++)
+                        remoteLockers[i] = remoteLocker;
+                }
+                else
+                {
+                    for(var i = 0; i < lockCreatorsCount; i++)
+                        remoteLockers[i] = new RemoteLocker(remoteLockImplementation);
+                }
             }
+            else
+                remoteLockCreator = new RemoteLockCreator(remoteLockImplementation);
         }
 
         public void Dispose()
         {
-            foreach(var remoteLockLocalManager in remoteLockers)
-                remoteLockLocalManager.Dispose();
-            LogRemoteLockerPerfStat();
+            if(useSingleLockKeeperThread)
+            {
+                foreach(var remoteLockLocalManager in remoteLockers)
+                    remoteLockLocalManager.Dispose();
+                LogRemoteLockerPerfStat();
+            }
         }
 
         private static void LogRemoteLockerPerfStat()
@@ -61,18 +67,30 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             Console.Out.WriteLine(metricsReport);
         }
 
-        public IRemoteLockCreator this[int index] { get { return remoteLockers[index]; } }
+        public IRemoteLockCreator this[int index] { get { return GetRemoteLockCreator(remoteLockers[index]); } }
 
         public IRemoteLock Lock(string lockId)
         {
-            return remoteLockers.Single().Lock(lockId);
+            return GetRemoteLockCreator(remoteLockers.Single()).Lock(lockId);
         }
 
         public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
         {
-            return remoteLockers.Single().TryGetLock(lockId, out remoteLock);
+            return GetRemoteLockCreator(remoteLockers.Single()).TryGetLock(lockId, out remoteLock);
         }
 
+        private IRemoteLockCreator GetRemoteLockCreator(RemoteLocker remoteLocker)
+        {
+            if(useSingleLockKeeperThread)
+                return remoteLocker;
+            if(localRivalOptimizationIsEnabled)
+                return remoteLockCreator;
+            return new RemoteLockCreatorWthoutLocalRivalOptimization(remoteLockCreator);
+        }
+
+        private readonly bool useSingleLockKeeperThread;
+        private readonly bool localRivalOptimizationIsEnabled;
         private readonly RemoteLocker[] remoteLockers;
+        private readonly RemoteLockCreator remoteLockCreator;
     }
 }

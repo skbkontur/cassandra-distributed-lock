@@ -24,13 +24,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 
-        [TestCase(1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
-        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
-        public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization)
+        [TestCase(true, 1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
+        [TestCase(true, 2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
+        [TestCase(true, 2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
+        [TestCase(true, 5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
+        [TestCase(true, 5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
+        [TestCase(true, 10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
+        [TestCase(false, 1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
+        [TestCase(false, 2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
+        [TestCase(false, 2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
+        [TestCase(false, 5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
+        [TestCase(false, 5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
+        [TestCase(false, 10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
+        public void Lock(bool useSingleLockKeeperThread, int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization)
         {
             var lockTtl = TimeSpan.FromSeconds(3);
             const int cassOpAttempts = 1;
@@ -45,7 +51,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var resources = new ConcurrentDictionary<string, Guid>();
-            using(var tester = new RemoteLockerTester(config))
+            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
             {
                 var actions = new Action[threads];
                 for(var th = 0; th < actions.Length; th++)

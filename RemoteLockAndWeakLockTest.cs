@@ -14,16 +14,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 {
     public class RemoteLockWithFailedCassandraTest : RemoteLockAndWeakLockTestBase
     {
-        [Test]
-        public void TestIncrementDecrementLock()
+        [TestCase(true, LocalRivalOptimization.Disabled)]
+        [TestCase(true, LocalRivalOptimization.Enabled)]
+        [TestCase(false, LocalRivalOptimization.Disabled)]
+        [TestCase(false, LocalRivalOptimization.Enabled)]
+        public void TestIncrementDecrementLock(bool useSingleLockKeeperThread, LocalRivalOptimization localRivalOptimization)
         {
-            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), true);
-        }
-
-        [Test]
-        public void TestIncrementDecrementLockWithoutLocalRivalOptimization()
-        {
-            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), false);
+            DoTestIncrementDecrementLock(useSingleLockKeeperThread, 10, TimeSpan.FromSeconds(10), localRivalOptimization);
         }
 
         protected override void ConfigureContainer(IContainer c)
@@ -35,22 +32,23 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
     public class RemoteLockAndWeakLockTest : RemoteLockAndWeakLockTestBase
     {
-        [Test, Ignore("Очень жирный тест")]
-        public void StressTest()
+        [Ignore("Очень жирный тест")]
+        [TestCase(true, LocalRivalOptimization.Disabled)]
+        [TestCase(true, LocalRivalOptimization.Enabled)]
+        [TestCase(false, LocalRivalOptimization.Disabled)]
+        [TestCase(false, LocalRivalOptimization.Enabled)]
+        public void StressTest(bool useSingleLockKeeperThread, LocalRivalOptimization localRivalOptimization)
         {
-            DoTestIncrementDecrementLock(60, TimeSpan.FromSeconds(60), true);
+            DoTestIncrementDecrementLock(useSingleLockKeeperThread, 60, TimeSpan.FromSeconds(60), localRivalOptimization);
         }
 
-        [Test]
-        public void TestIncrementDecrementLock()
+        [TestCase(true, LocalRivalOptimization.Disabled)]
+        [TestCase(true, LocalRivalOptimization.Enabled)]
+        [TestCase(false, LocalRivalOptimization.Disabled)]
+        [TestCase(false, LocalRivalOptimization.Enabled)]
+        public void TestIncrementDecrementLock(bool useSingleLockKeeperThread, LocalRivalOptimization localRivalOptimization)
         {
-            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), true);
-        }
-
-        [Test]
-        public void TestIncrementDecrementLockWithoutLocalRivalOptimization()
-        {
-            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), false);
+            DoTestIncrementDecrementLock(useSingleLockKeeperThread, 10, TimeSpan.FromSeconds(10), localRivalOptimization);
         }
     }
 
@@ -63,9 +61,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             remoteLockImplementation = (CassandraRemoteLockImplementation)container.Get<IRemoteLockImplementation>();
         }
 
-        protected void DoTestIncrementDecrementLock(int threadCount, TimeSpan runningTimeInterval, bool localRivalOptimization)
+        protected void DoTestIncrementDecrementLock(bool useSingleLockKeeperThread, int threadCount, TimeSpan runningTimeInterval, LocalRivalOptimization localRivalOptimization)
         {
-            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation);
+            var remoteLockCreators = PrepareRemoteLockCreators(useSingleLockKeeperThread, threadCount, localRivalOptimization, remoteLockImplementation);
 
             for(var i = 0; i < threadCount / 2; i++)
                 AddThread(IncrementDecrementActionLock, remoteLockCreators[i]);
@@ -74,15 +72,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             RunThreads(runningTimeInterval);
             JoinThreads();
 
-            //проверяем, что после всего мы в какой-то момент сможем-таки взять лок
-            foreach(var remoteLockCreator in remoteLockCreators)
-                Assert.That(!remoteLockCreator.CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
-
-            foreach(var remoteLockCreator in remoteLockCreators)
-                remoteLockCreator.Dispose();
+            CheckLockIsNotAcquiredLocally(useSingleLockKeeperThread, remoteLockCreators, lockId);
+            DisposeRemoteLockCreators(useSingleLockKeeperThread, remoteLockCreators);
         }
 
-        protected void IncrementDecrementActionLock(IRemoteLockCreator lockCreator, Random random)
+        private void IncrementDecrementActionLock(IRemoteLockCreator lockCreator, Random random)
         {
             try
             {
@@ -109,7 +103,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        protected void IncrementDecrementActionWeakLock(IRemoteLockCreator lockCreator, Random random)
+        private void IncrementDecrementActionWeakLock(IRemoteLockCreator lockCreator, Random random)
         {
             try
             {
@@ -138,12 +132,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        protected int ReadX()
+        private int ReadX()
         {
             return Interlocked.CompareExchange(ref x, 0, 0);
         }
 
-        protected void CheckLocks(string threadId)
+        private void CheckLocks(string threadId)
         {
             try
             {

@@ -49,6 +49,8 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RemoteLock.cs" />
+    <Compile Include="RemoteLockCreator.cs" />
     <Compile Include="RemoteLocker\BoundedBlockingQueue.cs" />
     <Compile Include="CassandraLockRepository.cs" />
     <Compile Include="CassandraRemoteLockImplementation.cs" />
@@ -64,6 +66,7 @@
     <Compile Include="RemoteLocker\RemoteLockHandle.cs" />
     <Compile Include="TimeSpanExtensions.cs" />
     <Compile Include="RemoteLocker\RemoteLocker.cs" />
+    <Compile Include="WeakRemoteLock.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Storages\Storages.csproj">

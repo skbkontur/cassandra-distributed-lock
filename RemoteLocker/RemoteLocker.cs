@@ -4,11 +4,11 @@ using System.Threading;
 
 using log4net;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
-    public class RemoteLockLocalManager : IDisposable, IRemoteLockLocalManager
+    public class RemoteLocker : IDisposable, IRemoteLockCreator
     {
-        public RemoteLockLocalManager(IRemoteLockImplementation remoteLockImplementation)
+        public RemoteLocker(IRemoteLockImplementation remoteLockImplementation)
         {
             this.remoteLockImplementation = remoteLockImplementation;
             keepLockAliveInterval = remoteLockImplementation.KeepLockAliveInterval;
@@ -19,6 +19,29 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     Name = "remoteLocksKeeper",
                 };
             remoteLocksKeeperThread.Start();
+        }
+
+        public IRemoteLock Lock(string lockId)
+        {
+            var threadId = Guid.NewGuid().ToString();
+            while (true)
+            {
+                string concurrentThreadId;
+                var remoteLock = TryAcquireLock(lockId, threadId, out concurrentThreadId);
+                if (remoteLock != null)
+                    return remoteLock;
+                var longSleep = random.Next(1000);
+                logger.WarnFormat("Поток {0} не смог взять блокировку {1}, потому что поток {2} владеет ей в данный момент. Засыпаем на {3} миллисекунд.", threadId, lockId, concurrentThreadId, longSleep);
+                Thread.Sleep(longSleep);
+            }
+        }
+
+        public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
+        {
+            string concurrentThreadId;
+            var threadId = Guid.NewGuid().ToString();
+            remoteLock = TryAcquireLock(lockId, threadId, out concurrentThreadId);
+            return remoteLock != null;
         }
 
         public void Dispose()
@@ -83,7 +106,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private void EnsureNotDisposed()
         {
             if(isDisposed)
-                throw new ObjectDisposedException("RemoteLockLocalManager is already disposed");
+                throw new ObjectDisposedException("RemoteLocker is already disposed");
         }
 
         private IRemoteLock DoTryAcquireLock(string lockId, string threadId, out string rivalThreadId)
@@ -104,7 +127,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     rivalThreadId = null;
                     var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
                     if(!remoteLocksById.TryAdd(lockId, remoteLockState))
-                        throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
+                        throw new InvalidOperationException(string.Format("RemoteLocker state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
                     remoteLocksQueue.Add(remoteLockState);
                     return new RemoteLockHandle(lockId, threadId, this);
                 case LockAttemptStatus.AnotherThreadIsOwner:
@@ -125,7 +148,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             RemoteLockState remoteLockState;
             if(!remoteLocksById.TryRemove(lockId, out remoteLockState) || remoteLockState.ThreadId != threadId)
-                throw new InvalidOperationException(string.Format("RemoteLockLocalManager state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
+                throw new InvalidOperationException(string.Format("RemoteLocker state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
             Unlock(remoteLockState);
         }
 
@@ -227,7 +250,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly IRemoteLockImplementation remoteLockImplementation;
         private readonly RemoteLockerMetrics metrics = new RemoteLockerMetrics();
         private readonly Random random = new Random(Guid.NewGuid().GetHashCode());
-        private readonly ILog logger = LogManager.GetLogger(typeof(RemoteLockLocalManager));
+        private readonly ILog logger = LogManager.GetLogger(typeof(RemoteLocker));
         private readonly ConcurrentDictionary<string, RemoteLockState> remoteLocksById = new ConcurrentDictionary<string, RemoteLockState>();
         private readonly BoundedBlockingQueue<RemoteLockState> remoteLocksQueue = new BoundedBlockingQueue<RemoteLockState>(int.MaxValue);
 

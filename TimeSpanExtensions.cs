@@ -2,7 +2,7 @@
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
-    internal static class TimeSpanExtensions
+    public static class TimeSpanExtensions
     {
         public static TimeSpan Multiply(this TimeSpan value, int factor)
         {

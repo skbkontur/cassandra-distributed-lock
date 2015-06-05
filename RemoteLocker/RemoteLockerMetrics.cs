@@ -1,6 +1,6 @@
 using Metrics;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
     public class RemoteLockerMetrics
     {

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
     public class BoundedBlockingQueue<T> : BlockingCollection<T>
     {

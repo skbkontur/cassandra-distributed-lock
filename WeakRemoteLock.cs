@@ -11,6 +11,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public WeakRemoteLock(IRemoteLockImplementation remoteLockImplementation, string lockId, out string concurrentThreadId, string threadId = null, bool localRivalsOptimization = true)
         {
             this.remoteLockImplementation = remoteLockImplementation;
+            keepLockAliveInterval = remoteLockImplementation.KeepLockAliveInterval;
             this.lockId = lockId;
             threadId = string.IsNullOrEmpty(threadId) ? Guid.NewGuid().ToString() : threadId;
             this.threadId = threadId;
@@ -121,7 +122,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                         return;
                     }
                     remoteLockImplementation.Relock(lockId, threadId);
-                    if(stopEvent.WaitOne(5000)) break;
+                    if(stopEvent.WaitOne(keepLockAliveInterval)) break;
                     diff = DateTime.UtcNow - lastTicks;
                     if(diff > TimeSpan.FromSeconds(30))
                         logger.WarnFormat(string.Format("Difference between updates too large: {0}s", diff));
@@ -142,5 +143,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly IRemoteLockImplementation remoteLockImplementation;
         private readonly Thread thread;
         private readonly ManualResetEvent stopEvent;
+        private readonly TimeSpan keepLockAliveInterval;
     }
 }

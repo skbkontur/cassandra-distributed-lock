@@ -16,8 +16,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             string concurrentThreadId;
             var weakRemoteLock = new WeakRemoteLock(remoteLockImplementation, lockId, out concurrentThreadId);
-            remoteLock = weakRemoteLock;
-            return string.IsNullOrEmpty(concurrentThreadId);
+            var success = string.IsNullOrEmpty(concurrentThreadId);
+            remoteLock = success ? weakRemoteLock : null;
+            return success;
         }
 
         /// <summary>

@@ -44,19 +44,18 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         private void DoTestIncrementDecrementLock(int threadCount, TimeSpan runningTimeInterval, bool localRivalOptimization)
         {
-            RemoteLockLocalManager[] remoteLockLocalManagers;
-            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation, out remoteLockLocalManagers);
+            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation);
 
             for(var i = 0; i < threadCount; i++)
                 AddThread(IncrementDecrementAction, remoteLockCreators[i]);
             RunThreads(runningTimeInterval);
             JoinThreads();
 
-            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
-                remoteLockLocalManager.Dispose();
+            foreach(var remoteLockCreator in remoteLockCreators)
+                remoteLockCreator.Dispose();
         }
 
-        private void IncrementDecrementAction(RemoteLockCreator lockCreator, Random random)
+        private void IncrementDecrementAction(IRemoteLockCreator lockCreator, Random random)
         {
             try
             {

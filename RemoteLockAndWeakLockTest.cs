@@ -65,8 +65,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         protected void DoTestIncrementDecrementLock(int threadCount, TimeSpan runningTimeInterval, bool localRivalOptimization)
         {
-            RemoteLockLocalManager[] remoteLockLocalManagers;
-            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation, out remoteLockLocalManagers);
+            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation);
 
             for(var i = 0; i < threadCount / 2; i++)
                 AddThread(IncrementDecrementActionLock, remoteLockCreators[i]);
@@ -76,14 +75,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             JoinThreads();
 
             //проверяем, что после всего мы в какой-то момент сможем-таки взять лок
-            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
-                Assert.That(!remoteLockLocalManager.CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
+            foreach(var remoteLockCreator in remoteLockCreators)
+                Assert.That(!remoteLockCreator.CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
 
-            foreach(var remoteLockLocalManager in remoteLockLocalManagers)
-                remoteLockLocalManager.Dispose();
+            foreach(var remoteLockCreator in remoteLockCreators)
+                remoteLockCreator.Dispose();
         }
 
-        protected void IncrementDecrementActionLock(RemoteLockCreator lockCreator, Random random)
+        protected void IncrementDecrementActionLock(IRemoteLockCreator lockCreator, Random random)
         {
             try
             {
@@ -110,7 +109,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        protected void IncrementDecrementActionWeakLock(RemoteLockCreator lockCreator, Random random)
+        protected void IncrementDecrementActionWeakLock(IRemoteLockCreator lockCreator, Random random)
         {
             try
             {

@@ -4,7 +4,7 @@ using SKBKontur.Cassandra.CassandraClient.Clusters;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
-    public class RemoteLockTesterConfig
+    public class RemoteLockerTesterConfig
     {
         public int? LockCreatorsCount { get; set; }
         public LocalRivalOptimization? LocalRivalOptimization { get; set; }

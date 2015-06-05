@@ -14,7 +14,7 @@ using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
     [TestFixture]
-    public class ConcurrentRemoteLockTests
+    public class ConcurrentRemoteLockerTests
     {
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
@@ -35,7 +35,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var lockTtl = TimeSpan.FromSeconds(3);
             const int cassOpAttempts = 1;
             var cassOpTimeout = TimeSpan.FromSeconds(1);
-            var config = new RemoteLockTesterConfig
+            var config = new RemoteLockerTesterConfig
                 {
                     LockCreatorsCount = threads,
                     LocalRivalOptimization = localRivalOptimization,
@@ -45,12 +45,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var resources = new ConcurrentDictionary<string, Guid>();
-            using(var remoteLockTester = new RemoteLockTester(config))
+            using(var tester = new RemoteLockerTester(config))
             {
                 var actions = new Action[threads];
                 for(var th = 0; th < actions.Length; th++)
                 {
-                    var remoteLockCreator = remoteLockTester[th];
+                    var remoteLockCreator = tester[th];
                     actions[th] = () =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
@@ -62,7 +62,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 resources[lockId] = resource;
                                 var opDuration = TimeSpan.FromMilliseconds(16);
                                 if(rng.NextDouble() < longRunningOpProbability)
-                                    opDuration = opDuration.Add(lockTtl).Add(TimeSpan.FromMilliseconds(cassOpAttempts * cassOpTimeout.TotalMilliseconds));
+                                    opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
                                 Thread.Sleep(opDuration);
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
                                 @lock.Dispose();

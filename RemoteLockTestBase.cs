@@ -16,6 +16,7 @@ using NUnit.Framework;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
+using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
@@ -64,7 +65,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
         }
 
-        protected void AddThread(Action<RemoteLockCreator, Random> shortAction, RemoteLockCreator lockCreator)
+        protected void AddThread(Action<IRemoteLockCreator, Random> shortAction, IRemoteLockCreator lockCreator)
         {
             var seed = Guid.NewGuid().GetHashCode();
             var thread = new Thread(() => MakePeriodicAction(shortAction, seed, lockCreator));
@@ -102,7 +103,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             logger.Info("RunThreads. end");
         }
 
-        private void MakePeriodicAction(Action<RemoteLockCreator, Random> shortAction, int seed, RemoteLockCreator lockCreator)
+        private void MakePeriodicAction(Action<IRemoteLockCreator, Random> shortAction, int seed, IRemoteLockCreator lockCreator)
         {
             try
             {
@@ -121,28 +122,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        protected static RemoteLockCreator[] PrepareRemoteLockCreators(int threadCount, bool localRivalOptimization, CassandraRemoteLockImplementation remoteLockImplementation, out RemoteLockLocalManager[] remoteLockLocalManagers)
+        protected static RemoteLocker[] PrepareRemoteLockCreators(int threadCount, bool localRivalOptimization, CassandraRemoteLockImplementation remoteLockImplementation)
         {
-            remoteLockLocalManagers = new RemoteLockLocalManager[threadCount];
-            var remoteLockCreators = new RemoteLockCreator[threadCount];
+            var remoteLockCreators = new RemoteLocker[threadCount];
             if(localRivalOptimization)
             {
-                var singleManager = new RemoteLockLocalManager(remoteLockImplementation);
-                var singleLockCreator = new RemoteLockCreator(singleManager);
+                var singleLockCreator = new RemoteLocker(remoteLockImplementation);
                 for(var i = 0; i < threadCount; i++)
-                {
-                    remoteLockLocalManagers[i] = singleManager;
                     remoteLockCreators[i] = singleLockCreator;
-                }
             }
             else
             {
                 for(var i = 0; i < threadCount; i++)
-                {
-                    var manager = new RemoteLockLocalManager(remoteLockImplementation);
-                    remoteLockLocalManagers[i] = manager;
-                    remoteLockCreators[i] = new RemoteLockCreator(manager);
-                }
+                    remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation);
             }
             return remoteLockCreators;
         }

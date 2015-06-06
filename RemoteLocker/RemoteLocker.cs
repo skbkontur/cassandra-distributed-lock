@@ -12,7 +12,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         {
             this.remoteLockImplementation = remoteLockImplementation;
             keepLockAliveInterval = remoteLockImplementation.KeepLockAliveInterval;
-            synchronizedOperationWarnThreshold = remoteLockImplementation.KeepLockAliveInterval;
+            lockOperationWarnThreshold = remoteLockImplementation.KeepLockAliveInterval.Multiply(2);
             remoteLocksKeeperThread = new Thread(KeepRemoteLocksAlive)
                 {
                     IsBackground = true,
@@ -24,24 +24,44 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         public IRemoteLock Lock(string lockId)
         {
             var threadId = Guid.NewGuid().ToString();
-            while (true)
+            Action<TimeSpan> finalAction = elapsed =>
+                {
+                    if(elapsed < lockOperationWarnThreshold)
+                        return;
+                    RemoteLockerMetrics.FreezeEvents.Mark("Lock");
+                    logger.ErrorFormat("Lock() took {0} ms for lockId: {1}, threadId: {2}", elapsed.TotalMilliseconds, lockId, threadId);
+                };
+            using(RemoteLockerMetrics.LockOp.NewContext(finalAction, FormatLockOperationId(lockId, threadId)))
             {
-                string concurrentThreadId;
-                var remoteLock = TryAcquireLock(lockId, threadId, out concurrentThreadId);
-                if (remoteLock != null)
-                    return remoteLock;
-                var longSleep = random.Next(1000);
-                logger.WarnFormat("Поток {0} не смог взять блокировку {1}, потому что поток {2} владеет ей в данный момент. Засыпаем на {3} миллисекунд.", threadId, lockId, concurrentThreadId, longSleep);
-                Thread.Sleep(longSleep);
+                while(true)
+                {
+                    string concurrentThreadId;
+                    var remoteLock = TryAcquireLock(lockId, threadId, out concurrentThreadId);
+                    if(remoteLock != null)
+                        return remoteLock;
+                    var longSleep = random.Next(1000);
+                    logger.WarnFormat("Поток {0} не смог взять блокировку {1}, потому что поток {2} владеет ей в данный момент. Засыпаем на {3} миллисекунд.", threadId, lockId, concurrentThreadId, longSleep);
+                    Thread.Sleep(longSleep);
+                }
             }
         }
 
         public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
         {
-            string concurrentThreadId;
             var threadId = Guid.NewGuid().ToString();
-            remoteLock = TryAcquireLock(lockId, threadId, out concurrentThreadId);
-            return remoteLock != null;
+            Action<TimeSpan> finalAction = elapsed =>
+                {
+                    if(elapsed < lockOperationWarnThreshold)
+                        return;
+                    RemoteLockerMetrics.FreezeEvents.Mark("TryGetLock");
+                    logger.ErrorFormat("TryGetLock() took {0} ms for lockId: {1}, threadId: {2}", elapsed.TotalMilliseconds, lockId, threadId);
+                };
+            using(RemoteLockerMetrics.TryGetLockOp.NewContext(finalAction, FormatLockOperationId(lockId, threadId)))
+            {
+                string concurrentThreadId;
+                remoteLock = TryAcquireLock(lockId, threadId, out concurrentThreadId);
+                return remoteLock != null;
+            }
         }
 
         public void Dispose()
@@ -54,38 +74,34 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             isDisposed = true;
         }
 
-        public IRemoteLock TryAcquireLock(string lockId, string threadId, out string concurrentThreadId)
+        private IRemoteLock TryAcquireLock(string lockId, string threadId, out string concurrentThreadId)
         {
-            ValidateArgs(lockId, threadId);
             EnsureNotDisposed();
-            using (metrics.TryAcquireLockOp.NewContext(elapsed =>
-            {
-                if (elapsed > synchronizedOperationWarnThreshold)
+            ValidateArgs(lockId, threadId);
+            Action<TimeSpan> finalAction = elapsed =>
                 {
-                    metrics.FreezeEvents.Mark("TryAcquireLock");
-                    logger.ErrorFormat("DoTryAcquireLock() took {0} ms for lockId: {1}, threadId: {2}", elapsed.TotalMilliseconds, lockId, threadId);
-                }
-            }, string.Format("lockId: {0}, threadId: {1}", lockId, threadId)))
-            {
+                    if(elapsed < lockOperationWarnThreshold)
+                        return;
+                    RemoteLockerMetrics.FreezeEvents.Mark("TryAcquireLock");
+                    logger.ErrorFormat("TryAcquireLock() took {0} ms for lockId: {1}, threadId: {2}", elapsed.TotalMilliseconds, lockId, threadId);
+                };
+            using(RemoteLockerMetrics.TryAcquireLockOp.NewContext(finalAction, FormatLockOperationId(lockId, threadId)))
                 return DoTryAcquireLock(lockId, threadId, out concurrentThreadId);
-            }
         }
 
         public void ReleaseLock(string lockId, string threadId)
         {
-            ValidateArgs(lockId, threadId);
             EnsureNotDisposed();
-            using (metrics.ReleaseLockOp.NewContext(elapsed =>
-            {
-                if (elapsed > synchronizedOperationWarnThreshold)
+            ValidateArgs(lockId, threadId);
+            Action<TimeSpan> finalAction = elapsed =>
                 {
-                    metrics.FreezeEvents.Mark("ReleaseLock");
-                    logger.ErrorFormat("DoReleaseLock() took {0} ms for lockId: {1}, threadId: {2}", elapsed.TotalMilliseconds, lockId, threadId);
-                }
-            }, string.Format("lockId: {0}, threadId: {1}", lockId, threadId)))
-            {
+                    if(elapsed < lockOperationWarnThreshold)
+                        return;
+                    RemoteLockerMetrics.FreezeEvents.Mark("ReleaseLock");
+                    logger.ErrorFormat("ReleaseLock() took {0} ms for lockId: {1}, threadId: {2}", elapsed.TotalMilliseconds, lockId, threadId);
+                };
+            using(RemoteLockerMetrics.ReleaseLockOp.NewContext(finalAction, FormatLockOperationId(lockId, threadId)))
                 DoReleaseLock(lockId, threadId);
-            }
         }
 
         [Obsolete("Только для тестов")]
@@ -93,6 +109,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         {
             EnsureNotDisposed();
             return remoteLocksById.ContainsKey(lockId);
+        }
+
+        private static string FormatLockOperationId(string lockId, string threadId)
+        {
+            return string.Format("lockId: {0}, threadId: {1}", lockId, threadId);
         }
 
         private static void ValidateArgs(string lockId, string threadId)
@@ -120,7 +141,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             var attempt = 1;
             while(true)
             {
-                var lockAttempt = remoteLockImplementation.TryLock(lockId, threadId);
+                LockAttemptResult lockAttempt;
+                using(RemoteLockerMetrics.CassandraImplTryLockOp.NewContext(FormatLockOperationId(lockId, threadId)))
+                    lockAttempt = remoteLockImplementation.TryLock(lockId, threadId);
                 switch(lockAttempt.Status)
                 {
                 case LockAttemptStatus.Success:
@@ -159,7 +182,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 remoteLockState.NextKeepAliveMoment = null;
                 try
                 {
-                    remoteLockImplementation.Unlock(remoteLockState.LockId, remoteLockState.ThreadId);
+                    using(RemoteLockerMetrics.CassandraImplUnlockOp.NewContext(remoteLockState.ToString()))
+                        remoteLockImplementation.Unlock(remoteLockState.LockId, remoteLockState.ThreadId);
                 }
                 catch(Exception e)
                 {
@@ -177,17 +201,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     RemoteLockState remoteLockState;
                     if(remoteLocksQueue.TryTake(out remoteLockState, Timeout.Infinite))
                     {
-                        using(metrics.KeepLockOp.NewContext(elapsed =>
+                        Action<TimeSpan> finalAction = elapsed =>
                             {
-                                if(elapsed > keepLockAliveInterval + synchronizedOperationWarnThreshold)
-                                {
-                                    metrics.FreezeEvents.Mark("KeepLock");
-                                    logger.ErrorFormat("ProcessRemoteLocksQueueItem() took {0} ms for remote lock: {1}", elapsed.TotalMilliseconds, remoteLockState);
-                                }
-                            }, remoteLockState.ToString()))
-                        {
-                            ProcessRemoteLocksQueueItem(remoteLockState);
-                        }
+                                if(elapsed < keepLockAliveInterval + lockOperationWarnThreshold)
+                                    return;
+                                RemoteLockerMetrics.FreezeEvents.Mark("KeepLockAlive");
+                                logger.ErrorFormat("KeepLockAlive() took {0} ms for remote lock: {1}", elapsed.TotalMilliseconds, remoteLockState);
+                            };
+                        using(RemoteLockerMetrics.KeepLockAliveOp.NewContext(finalAction, remoteLockState.ToString()))
+                            KeepLockAlive(remoteLockState);
                     }
                 }
             }
@@ -197,7 +219,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             }
         }
 
-        private void ProcessRemoteLocksQueueItem(RemoteLockState remoteLockState)
+        private void KeepLockAlive(RemoteLockState remoteLockState)
         {
             TimeSpan? timeToSleep = null;
             lock(remoteLockState)
@@ -231,7 +253,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             {
                 try
                 {
-                    remoteLockImplementation.Relock(remoteLockState.LockId, remoteLockState.ThreadId);
+                    using(RemoteLockerMetrics.CassandraImplRelockOp.NewContext(remoteLockState.ToString()))
+                        remoteLockImplementation.Relock(remoteLockState.LockId, remoteLockState.ThreadId);
                     break;
                 }
                 catch(Exception e)
@@ -246,9 +269,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         private volatile bool isDisposed;
         private readonly Thread remoteLocksKeeperThread;
         private readonly TimeSpan keepLockAliveInterval;
-        private readonly TimeSpan synchronizedOperationWarnThreshold;
+        private readonly TimeSpan lockOperationWarnThreshold;
         private readonly IRemoteLockImplementation remoteLockImplementation;
-        private readonly RemoteLockerMetrics metrics = new RemoteLockerMetrics();
         private readonly Random random = new Random(Guid.NewGuid().GetHashCode());
         private readonly ILog logger = LogManager.GetLogger(typeof(RemoteLocker));
         private readonly ConcurrentDictionary<string, RemoteLockState> remoteLocksById = new ConcurrentDictionary<string, RemoteLockState>();

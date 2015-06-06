@@ -62,7 +62,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         private static void LogRemoteLockerPerfStat()
         {
-            var metricsData = Metric.Context("RemoteLocker").DataProvider.CurrentMetricsData;
+            var metricsData = RemoteLockerMetrics.Context.DataProvider.CurrentMetricsData;
             var metricsReport = StringReport.RenderMetrics(metricsData, () => new HealthStatus());
             Console.Out.WriteLine(metricsReport);
         }

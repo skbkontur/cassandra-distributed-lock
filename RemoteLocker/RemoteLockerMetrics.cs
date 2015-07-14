@@ -12,7 +12,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         public static readonly Timer KeepLockAliveOp = Context.Timer("KeepLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
         public static readonly Timer CassandraImplTryLockOp = Context.Timer("CassandraImpl.TryLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
         public static readonly Timer CassandraImplRelockOp = Context.Timer("CassandraImpl.Relock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer CassandraImplUnlockOp = Context.Timer("CassandraImpl.Unock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+        public static readonly Timer CassandraImplUnlockOp = Context.Timer("CassandraImpl.Unlock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
         public static readonly Meter FreezeEvents = Context.Meter("FreezeEvents", Unit.Events, TimeUnit.Hours);
     }
 }

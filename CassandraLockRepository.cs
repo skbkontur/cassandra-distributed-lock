@@ -124,7 +124,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             LockMetadata res = null;
             MakeInConnection(connection =>
                 {
-                    var columns = connection.GetRow(row).ToArray();
+                    var columns = connection.GetColumns(row, new []{"LockCount", "LockRowId"}).ToArray();
                     if(columns.Any(x => x.Name == "LockCount"))
                     {
                         res = new LockMetadata

@@ -16,7 +16,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 {
                     ColumnFamilyFullName = columnFamilyFullName,
                     LockTtl = TimeSpan.FromMinutes(3),
-                    KeepLockAliveInterval = TimeSpan.FromSeconds(5),
+                    KeepLockAliveInterval = TimeSpan.FromSeconds(10),
                 };
         }
     }

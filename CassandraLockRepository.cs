@@ -40,9 +40,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             WriteLockRow(GetMainRowKey(lockRowId), threadId, lockTtl);
         }
 
-        public LockAttemptResult TryLock(string lockId, string threadId, TimeSpan lockTtl, TimeSpan ttl)
+        public LockAttemptResult TryLock(string lockRowId, string threadId, TimeSpan lockTtl, TimeSpan ttl)
         {
-            var items = GetThreadsInLockRow(lockId);
+            var items = GetThreadsInLockRow(lockRowId);
             if(items.Length == 1)
                 return items[0] == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(items[0]);
             if(items.Length > 1)
@@ -52,22 +52,22 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
 
-            var beforeOurWriteShades = GetShadowThreadsInLockRow(lockId);
+            var beforeOurWriteShades = GetShadowThreadsInLockRow(lockRowId);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteLockRow(GetShadowRowKey(lockId), threadId, lockTtl);
-            var shades = GetShadowThreadsInLockRow(lockId);
+            WriteLockRow(GetShadowRowKey(lockRowId), threadId, lockTtl);
+            var shades = GetShadowThreadsInLockRow(lockRowId);
             if(shades.Length == 1)
             {
-                items = GetThreadsInLockRow(lockId);
+                items = GetThreadsInLockRow(lockRowId);
                 if(items.Length == 0)
                 {
-                    WriteLockRow(GetMainRowKey(lockId), threadId, ttl);
-                    Delete(GetShadowRowKey(lockId), threadId);
+                    WriteLockRow(GetMainRowKey(lockRowId), threadId, ttl);
+                    Delete(GetShadowRowKey(lockRowId), threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            Delete(GetShadowRowKey(lockId), threadId);
+            Delete(GetShadowRowKey(lockRowId), threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 

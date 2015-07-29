@@ -34,16 +34,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             remoteLockers = new RemoteLocker[lockCreatorsCount];
             if(useSingleLockKeeperThread)
             {
+                remoteLockerMetrics = new RemoteLockerMetrics("dummyKeyspace");
                 if(localRivalOptimizationIsEnabled)
                 {
-                    var remoteLocker = new RemoteLocker(remoteLockImplementation);
+                    var remoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
                     for(var i = 0; i < lockCreatorsCount; i++)
                         remoteLockers[i] = remoteLocker;
                 }
                 else
                 {
                     for(var i = 0; i < lockCreatorsCount; i++)
-                        remoteLockers[i] = new RemoteLocker(remoteLockImplementation);
+                        remoteLockers[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
                 }
             }
             else
@@ -60,9 +61,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        private static void LogRemoteLockerPerfStat()
+        private void LogRemoteLockerPerfStat()
         {
-            var metricsData = RemoteLockerMetrics.Context.DataProvider.CurrentMetricsData;
+            var metricsData = remoteLockerMetrics.Context.DataProvider.CurrentMetricsData;
             var metricsReport = StringReport.RenderMetrics(metricsData, () => new HealthStatus());
             Console.Out.WriteLine(metricsReport);
         }
@@ -92,5 +93,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private readonly bool localRivalOptimizationIsEnabled;
         private readonly RemoteLocker[] remoteLockers;
         private readonly RemoteLockCreator remoteLockCreator;
+        private readonly RemoteLockerMetrics remoteLockerMetrics;
     }
 }

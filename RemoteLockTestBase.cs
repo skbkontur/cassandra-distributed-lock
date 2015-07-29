@@ -127,16 +127,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var remoteLockCreators = new IRemoteLockCreator[threadCount];
             if(useSingleLockKeeperThread)
             {
+                var remoteLockerMetrics = new RemoteLockerMetrics(null);
                 if(localRivalOptimization == LocalRivalOptimization.Enabled)
                 {
-                    var singleRemoteLocker = new RemoteLocker(remoteLockImplementation);
+                    var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
                     for(var i = 0; i < threadCount; i++)
                         remoteLockCreators[i] = singleRemoteLocker;
                 }
                 else
                 {
                     for(var i = 0; i < threadCount; i++)
-                        remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation);
+                        remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
                 }
             }
             else

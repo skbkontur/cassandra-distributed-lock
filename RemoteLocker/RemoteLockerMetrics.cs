@@ -2,17 +2,33 @@ using Metrics;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
-    public static class RemoteLockerMetrics
+    public class RemoteLockerMetrics
     {
-        public static readonly MetricsContext Context = Metric.Context("RemoteLocker");
-        public static readonly Timer LockOp = Context.Timer("Lock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer TryGetLockOp = Context.Timer("TryGetLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer TryAcquireLockOp = Context.Timer("TryAcquireLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer ReleaseLockOp = Context.Timer("ReleaseLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer KeepLockAliveOp = Context.Timer("KeepLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer CassandraImplTryLockOp = Context.Timer("CassandraImpl.TryLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer CassandraImplRelockOp = Context.Timer("CassandraImpl.Relock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Timer CassandraImplUnlockOp = Context.Timer("CassandraImpl.Unlock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
-        public static readonly Meter FreezeEvents = Context.Meter("FreezeEvents", Unit.Events, TimeUnit.Hours);
+        public RemoteLockerMetrics(string keyspaceName)
+        {
+            Context = Metric.Context("RemoteLocker");
+            if(!string.IsNullOrEmpty(keyspaceName))
+                Context = Context.Context(keyspaceName);
+            LockOp = Context.Timer("Lock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            TryGetLockOp = Context.Timer("TryGetLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            TryAcquireLockOp = Context.Timer("TryAcquireLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            ReleaseLockOp = Context.Timer("ReleaseLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            KeepLockAliveOp = Context.Timer("KeepLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            CassandraImplTryLockOp = Context.Timer("CassandraImpl.TryLock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            CassandraImplRelockOp = Context.Timer("CassandraImpl.Relock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            CassandraImplUnlockOp = Context.Timer("CassandraImpl.Unlock", Unit.Calls, SamplingType.LongTerm, TimeUnit.Minutes);
+            FreezeEvents = Context.Meter("FreezeEvents", Unit.Events, TimeUnit.Hours);
+        }
+
+        public MetricsContext Context { get; private set; }
+        public Timer LockOp { get; private set; }
+        public Timer TryGetLockOp { get; private set; }
+        public Timer TryAcquireLockOp { get; private set; }
+        public Timer ReleaseLockOp { get; private set; }
+        public Timer KeepLockAliveOp { get; private set; }
+        public Timer CassandraImplTryLockOp { get; private set; }
+        public Timer CassandraImplRelockOp { get; private set; }
+        public Timer CassandraImplUnlockOp { get; private set; }
+        public Meter FreezeEvents { get; private set; }
     }
 }

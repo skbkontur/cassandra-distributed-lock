@@ -20,29 +20,29 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             this.columnFamilyFullName = columnFamilyFullName;
         }
 
-        public string[] GetThreadsInLockRow(string lockRowId)
+        public string[] GetThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return Search(GetMainRowKey(lockRowId));
+            return Search(GetMainRowKey(lockMetadata.LockRowId));
         }
 
-        public string[] GetShadowThreadsInLockRow(string lockRowId)
+        public string[] GetShadowThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return Search(GetShadowRowKey(lockRowId));
+            return Search(GetShadowRowKey(lockMetadata.LockRowId));
         }
 
-        public void UnlockRow(string lockRowId, string threadId)
+        public void UnlockRow(LockMetadata lockMetadata, string threadId)
         {
-            Delete(GetMainRowKey(lockRowId), threadId);
+            Delete(GetMainRowKey(lockMetadata.LockRowId), threadId);
         }
 
-        public void RelockRow(string lockRowId, string threadId, TimeSpan lockTtl)
+        public void RelockRow(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl)
         {
-            WriteLockRow(GetMainRowKey(lockRowId), threadId, lockTtl);
+            WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, lockTtl);
         }
 
-        public LockAttemptResult TryLock(string lockRowId, string threadId, TimeSpan lockTtl, TimeSpan ttl)
+        public LockAttemptResult TryLock(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl, TimeSpan ttl)
         {
-            var items = GetThreadsInLockRow(lockRowId);
+            var items = GetThreadsInLockRow(lockMetadata);
             if(items.Length == 1)
                 return items[0] == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(items[0]);
             if(items.Length > 1)
@@ -52,33 +52,33 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
 
-            var beforeOurWriteShades = GetShadowThreadsInLockRow(lockRowId);
+            var beforeOurWriteShades = GetShadowThreadsInLockRow(lockMetadata);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteLockRow(GetShadowRowKey(lockRowId), threadId, lockTtl);
-            var shades = GetShadowThreadsInLockRow(lockRowId);
+            WriteLockRow(GetShadowRowKey(lockMetadata.LockRowId), threadId, lockTtl);
+            var shades = GetShadowThreadsInLockRow(lockMetadata);
             if(shades.Length == 1)
             {
-                items = GetThreadsInLockRow(lockRowId);
+                items = GetThreadsInLockRow(lockMetadata);
                 if(items.Length == 0)
                 {
-                    WriteLockRow(GetMainRowKey(lockRowId), threadId, ttl);
-                    Delete(GetShadowRowKey(lockRowId), threadId);
+                    WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+                    Delete(GetShadowRowKey(lockMetadata.LockRowId), threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            Delete(GetShadowRowKey(lockRowId), threadId);
+            Delete(GetShadowRowKey(lockMetadata.LockRowId), threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
-        public void UpdateLockRowTtl(string lockRowId, string threadId, TimeSpan ttl)
+        public void UpdateLockRowTtl(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteLockRow(GetMainRowKey(lockRowId), threadId, ttl);
+            WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
 
-        public void LockRowUnSafe(string lockRowId, string threadId, TimeSpan ttl)
+        public void LockRowUnSafe(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteLockRow(GetMainRowKey(lockRowId), threadId, ttl);
+            WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
 
         public void WriteLockMetadata(string lockId, LockMetadata lockMetadata)

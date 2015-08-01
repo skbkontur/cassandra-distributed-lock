@@ -23,17 +23,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
 
-            var result = lockRepository.TryLock(lockMetadata.LockRowId, threadId, lockTtl, singleOperationTimeout + lockTtl);
+            var result = lockRepository.TryLock(lockMetadata, threadId, lockTtl, singleOperationTimeout + lockTtl);
             if(result.Status == LockAttemptStatus.Success)
             {
                 if(lockMetadata.LockCount > 1000)
                 {
                     var newLockMetadata = GenerateNewLockMetadata();
 
-                    lockRepository.UpdateLockRowTtl(lockMetadata.LockRowId, threadId, singleOperationTimeout.Multiply(3));
-                    lockRepository.LockRowUnSafe(newLockMetadata.LockRowId, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
+                    lockRepository.UpdateLockRowTtl(lockMetadata, threadId, singleOperationTimeout.Multiply(3));
+                    lockRepository.LockRowUnSafe(newLockMetadata, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
                     lockRepository.WriteLockMetadata(lockId, newLockMetadata);
-                    lockRepository.UpdateLockRowTtl(lockMetadata.LockRowId, threadId, TimeSpan.FromDays(7));
+                    lockRepository.UpdateLockRowTtl(lockMetadata, threadId, TimeSpan.FromDays(7));
 
                     return LockAttemptResult.Success();
                 }
@@ -46,26 +46,26 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public void Unlock(string lockId, string threadId)
         {
-            var lockReference = GetOrCreateLockMetadata(lockId);
-            lockRepository.UnlockRow(lockReference.LockRowId, threadId);
+            var lockMetadata = GetOrCreateLockMetadata(lockId);
+            lockRepository.UnlockRow(lockMetadata, threadId);
         }
 
         public void Relock(string lockId, string threadId)
         {
-            var lockReference = GetOrCreateLockMetadata(lockId);
-            lockRepository.RelockRow(lockReference.LockRowId, threadId, lockTtl);
+            var lockMetadata = GetOrCreateLockMetadata(lockId);
+            lockRepository.RelockRow(lockMetadata, threadId, lockTtl);
         }
 
         public string[] GetLockThreads(string lockId)
         {
-            var lockReference = GetOrCreateLockMetadata(lockId);
-            return lockRepository.GetThreadsInLockRow(lockReference.LockRowId);
+            var lockMetadata = GetOrCreateLockMetadata(lockId);
+            return lockRepository.GetThreadsInLockRow(lockMetadata);
         }
 
         public string[] GetShadeThreads(string lockId)
         {
-            var lockReference = GetOrCreateLockMetadata(lockId);
-            return lockRepository.GetShadowThreadsInLockRow(lockReference.LockRowId);
+            var lockMetadata = GetOrCreateLockMetadata(lockId);
+            return lockRepository.GetShadowThreadsInLockRow(lockMetadata);
         }
 
         private LockMetadata GetOrCreateLockMetadata(string lockId)

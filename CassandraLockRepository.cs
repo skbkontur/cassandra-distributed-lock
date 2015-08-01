@@ -76,11 +76,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             WriteThreadToRow(lockMetadata.CurrentLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
-
-        public void LockRowUnSafe(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
-        {
-            WriteThreadToRow(lockMetadata.PreviousLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
-        }
         
         public void WriteLockMetadata(string lockId, LockMetadata lockMetadata)
         {
@@ -146,21 +141,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     }
                 });
             return res;
-        }
-
-        public void IncrementLockCount(string lockId, LockMetadata lockMetadata)
-        {
-            lockMetadata.LockCount++;
-
-            MakeInConnection(connection => connection.AddColumn(
-                GetLockMetadataRowKey(lockId),
-                new Column
-                {
-                    Name = "LockCount",
-                    Value = serializer.Serialize(lockMetadata.LockCount),
-                    Timestamp = GetNowTicks()
-                }
-                                               ));
         }
 
         private static string GetShadowRowKey(string lockId)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 using GroBuf;
 
@@ -27,19 +28,24 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var result = lockRepository.TryLock(lockMetadata, threadId, lockTtl, singleOperationTimeout + lockTtl);
             if(result.Status == LockAttemptStatus.Success)
             {
+                var newLockMetadata = NewLockMetadata(lockMetadata, threadId);
+
                 if(lockMetadata.LockCount > changeLockRowThreshold)
                 {
-                    var newLockMetadata = GenerateNewLockMetadata();
+                    newLockMetadata.LockCount = 1;
+                    newLockMetadata.LockRowId = Guid.NewGuid().ToString();
 
                     lockRepository.UpdateLockRowTtl(lockMetadata, threadId, singleOperationTimeout.Multiply(3));
-                    lockRepository.LockRowUnSafe(newLockMetadata, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
+                    lockRepository.RelockRow(newLockMetadata, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
                     lockRepository.WriteLockMetadata(lockId, newLockMetadata);
                     lockRepository.UpdateLockRowTtl(lockMetadata, threadId, TimeSpan.FromDays(7));
 
                     return LockAttemptResult.Success();
                 }
 
-                lockRepository.IncrementLockCount(lockId, lockMetadata);
+                newLockMetadata.LockCount = lockMetadata.LockCount + 1;
+                newLockMetadata.LockRowId = lockMetadata.LockRowId;
+                lockRepository.WriteLockMetadata(lockId, newLockMetadata);
             }
 
             return result;
@@ -75,12 +81,16 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return result ?? new LockMetadata {LockCount = 0, LockRowId = lockId};
         }
 
-        private static LockMetadata GenerateNewLockMetadata()
+        private LockMetadata NewLockMetadata(LockMetadata currentLockMetadata, string threadId)
         {
             return new LockMetadata
                 {
-                    LockCount = 1,
-                    LockRowId = Guid.NewGuid().ToString()
+                    PreviousLockOwner = currentLockMetadata.CurrentLockOwner,
+                    CurrentLockOwner = new LockOwner
+                        {
+                            ThreadId = threadId,
+                            LockRowThreshold = Math.Max(DateTime.UtcNow.Ticks, currentLockMetadata.CurrentLockOwner == null ? 0 : currentLockMetadata.CurrentLockOwner.LockRowThreshold)
+                        }
                 };
         }
 

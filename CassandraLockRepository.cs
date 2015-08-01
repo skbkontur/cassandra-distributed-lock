@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
@@ -22,22 +23,22 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public string[] GetThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return SearchThreadsInRow(GetMainRowKey(lockMetadata.LockRowId));
+            return SearchThreadsInRow(lockMetadata.PreviousLockOwner, GetMainRowKey(lockMetadata.LockRowId));
         }
 
         public string[] GetShadowThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return SearchThreadsInRow(GetShadowRowKey(lockMetadata.LockRowId));
+            return SearchThreadsInRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId));
         }
 
         public void UnlockRow(LockMetadata lockMetadata, string threadId)
         {
-            DeleteThreadFromRow(GetMainRowKey(lockMetadata.LockRowId), threadId);
+            DeleteThreadFromRow(lockMetadata.PreviousLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId);
         }
 
         public void RelockRow(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl)
         {
-            WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, lockTtl);
+            WriteThreadToRow(lockMetadata.PreviousLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, lockTtl);
         }
 
         public LockAttemptResult TryLock(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl, TimeSpan ttl)
@@ -55,52 +56,96 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var beforeOurWriteShades = GetShadowThreadsInLockRow(lockMetadata);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteThreadToRow(GetShadowRowKey(lockMetadata.LockRowId), threadId, lockTtl);
+            WriteThreadToRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId), threadId, lockTtl);
             var shades = GetShadowThreadsInLockRow(lockMetadata);
             if(shades.Length == 1)
             {
                 items = GetThreadsInLockRow(lockMetadata);
                 if(items.Length == 0)
                 {
-                    WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
-                    DeleteThreadFromRow(GetShadowRowKey(lockMetadata.LockRowId), threadId);
+                    WriteThreadToRow(lockMetadata.CurrentLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+                    DeleteThreadFromRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId), threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            DeleteThreadFromRow(GetShadowRowKey(lockMetadata.LockRowId), threadId);
+            DeleteThreadFromRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId), threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
         public void UpdateLockRowTtl(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+            WriteThreadToRow(lockMetadata.CurrentLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
 
         public void LockRowUnSafe(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+            WriteThreadToRow(lockMetadata.PreviousLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
-
+        
         public void WriteLockMetadata(string lockId, LockMetadata lockMetadata)
         {
-            MakeInConnection(connection => connection.AddBatch(
-                GetLockMetadataRowKey(lockId),
-                new[]
+            var columns = new List<Column>
+                {
+                    new Column
+                        {
+                            Name = "LockRowId",
+                            Value = serializer.Serialize(lockMetadata.LockRowId),
+                            Timestamp = GetNowTicks()
+                        },
+                    new Column
+                        {
+                            Name = "LockCount",
+                            Value = serializer.Serialize(lockMetadata.LockCount),
+                            Timestamp = GetNowTicks()
+                        }
+                };
+            if(lockMetadata.PreviousLockOwner != null)
+            {
+                columns.Add(new Column
                     {
-                        new Column
+                        Name = "PreviousLockOwner",
+                        Value = serializer.Serialize(lockMetadata.PreviousLockOwner),
+                        Timestamp = GetNowTicks()
+                    });
+            }
+            if(lockMetadata.CurrentLockOwner != null)
+            {
+                columns.Add(new Column
+                    {
+                        Name = "CurrentLockOwner",
+                        Value = serializer.Serialize(lockMetadata.CurrentLockOwner),
+                        Timestamp = GetNowTicks()
+                    });
+            }
+
+            MakeInConnection(connection => connection.AddBatch(GetLockMetadataRowKey(lockId), columns.ToArray()));
+        }
+
+        public LockMetadata GetLockMetadata(string lockId, string defaultLockRowId)
+        {
+            var row = GetLockMetadataRowKey(lockId);
+            LockMetadata res = null;
+            MakeInConnection(connection =>
+                {
+                    var columns = connection.GetColumns(row, new[] { "LockCount", "LockRowId", "PreviousLockOwner", "CurrentLockOwner" });
+                    if(columns.Any(x => x.Name == "LockCount"))
+                    {
+                        res = new LockMetadata
                             {
-                                Name = "LockRowId",
-                                Value = serializer.Serialize(lockMetadata.LockRowId),
-                                Timestamp = GetNowTicks()
-                            },
-                        new Column
-                            {
-                                Name = "LockCount",
-                                Value = serializer.Serialize(lockMetadata.LockCount),
-                                Timestamp = GetNowTicks()
-                            }
+                                LockCount = serializer.Deserialize<int>(columns.First(x => x.Name == "LockCount").Value),
+                                LockRowId = columns.Any(x => x.Name == "LockRowId")
+                                                ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
+                                                : defaultLockRowId,
+                                PreviousLockOwner = columns.Any(x => x.Name == "PreviousLockOwner")
+                                                ? serializer.Deserialize<LockOwner>(columns.First(x => x.Name == "PreviousLockOwner").Value)
+                                                : null,
+                                CurrentLockOwner = columns.Any(x => x.Name == "CurrentLockOwner")
+                                                ? serializer.Deserialize<LockOwner>(columns.First(x => x.Name == "CurrentLockOwner").Value)
+                                                : null
+                            };
                     }
-                                               ));
+                });
+            return res;
         }
 
         public void IncrementLockCount(string lockId, LockMetadata lockMetadata)
@@ -110,33 +155,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             MakeInConnection(connection => connection.AddColumn(
                 GetLockMetadataRowKey(lockId),
                 new Column
-                    {
-                        Name = "LockCount",
-                        Value = serializer.Serialize(lockMetadata.LockCount),
-                        Timestamp = GetNowTicks()
-                    }
-                                               ));
-        }
-
-        public LockMetadata GetLockMetadata(string lockId, string defaultLockRowId)
-        {
-            var row = GetLockMetadataRowKey(lockId);
-            LockMetadata res = null;
-            MakeInConnection(connection =>
                 {
-                    var columns = connection.GetColumns(row, new []{"LockCount", "LockRowId"});
-                    if(columns.Any(x => x.Name == "LockCount"))
-                    {
-                        res = new LockMetadata
-                            {
-                                LockCount = serializer.Deserialize<int>(columns.First(x => x.Name == "LockCount").Value),
-                                LockRowId = columns.Any(x => x.Name == "LockRowId")
-                                                ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
-                                                : defaultLockRowId,
-                            };
-                    }
-                });
-            return res;
+                    Name = "LockCount",
+                    Value = serializer.Serialize(lockMetadata.LockCount),
+                    Timestamp = GetNowTicks()
+                }
+                                               ));
         }
 
         private static string GetShadowRowKey(string lockId)
@@ -154,25 +178,25 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return "Metadata_" + lockId;
         }
 
-        private void WriteThreadToRow(string rowName, string threadId, TimeSpan ttl)
+        private void WriteThreadToRow(LockOwner lockOwner, string rowName, string threadId, TimeSpan ttl)
         {
             MakeInConnection(connection => connection.AddColumn(rowName, new Column
                 {
-                    Name = threadId,
+                    Name = TransformThreadIdToColumnName(lockOwner, threadId),
                     Value = new byte[] {0},
                     Timestamp = GetNowTicks(),
                     TTL = (int?)ttl.TotalSeconds
                 }));
         }
 
-        private string[] SearchThreadsInRow(string rowName)
+        private string[] SearchThreadsInRow(LockOwner lockOwner, string rowName)
         {
             var res = new string[0];
             MakeInConnection(connection =>
                 {
-                    var columns = connection.GetRow(rowName).ToArray();
+                    var columns = connection.GetRow(rowName, GetLockRowOperationsThreshold(lockOwner)).ToArray();
                     if(columns.Length != 0)
-                        res = columns.Where(x => x.Value != null && x.Value.Length != 0).Select(x => x.Name).ToArray();
+                        res = columns.Where(x => x.Value != null && x.Value.Length != 0).Select(x => TransformColumnNameToThreadId(x.Name)).ToArray();
                 });
             return res;
         }
@@ -195,11 +219,32 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             action(connection);
         }
 
-        private void DeleteThreadFromRow(string rowName, string threadId)
+        private void DeleteThreadFromRow(LockOwner lockOwner, string rowName, string threadId)
         {
-            MakeInConnection(connection => connection.DeleteBatch(rowName, new[] {threadId}, GetNowTicks()));
+            MakeInConnection(connection => connection.DeleteBatch(rowName, new[] { TransformThreadIdToColumnName(lockOwner, threadId) }, GetNowTicks()));
         }
 
+        private string TransformThreadIdToColumnName(LockOwner lockOwner, string threadId)
+        {
+            if (string.IsNullOrEmpty(threadId))
+                throw new ArgumentException("Empty ThreadId is not supported", "threadId");
+            if (threadId.Contains(delimiterSpecialSymbol))
+                throw new ArgumentException(string.Format("ThreadId cannot contains '{0}' symbol", delimiterSpecialSymbol), "threadId");
+            var threshold = GetLockRowOperationsThreshold(lockOwner);
+            return threshold == null ? threadId : threshold + delimiterSpecialSymbol + threadId;
+       }
+
+        private string GetLockRowOperationsThreshold(LockOwner lockOwner)
+        {
+            return lockOwner == null ? null : lockOwner.LockRowThreshold.ToString();
+        }
+
+        private string TransformColumnNameToThreadId(string columnName)
+        {
+            return columnName.Contains(delimiterSpecialSymbol) ? columnName.Split(delimiterSpecialSymbol)[1] : columnName;
+        }
+
+        private const char delimiterSpecialSymbol = ':';
         private readonly ICassandraCluster cassandraCluster;
         private readonly ISerializer serializer;
         private readonly ColumnFamilyFullName columnFamilyFullName;

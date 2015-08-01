@@ -23,12 +23,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             localRivalOptimizationIsEnabled = config.LocalRivalOptimization != LocalRivalOptimization.Disabled;
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
             var cassandraCluster = new CassandraCluster(config.CassandraClusterSettings ?? CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
-            var cassandraRemoteLockImplementationSettings = new CassandraRemoteLockImplementationSettings
-                {
-                    ColumnFamilyFullName = ColumnFamilies.remoteLock,
-                    LockTtl = config.LockTtl ?? TimeSpan.FromSeconds(10),
-                    KeepLockAliveInterval = config.KeepLockAliveInterval ?? TimeSpan.FromSeconds(2),
-                };
+            var cassandraRemoteLockImplementationSettings = new CassandraRemoteLockImplementationSettings(
+                ColumnFamilies.remoteLock, config.LockTtl ?? TimeSpan.FromSeconds(10), config.KeepLockAliveInterval ?? TimeSpan.FromSeconds(2), 10);
+                
             var remoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, cassandraRemoteLockImplementationSettings);
             var lockCreatorsCount = config.LockCreatorsCount ?? 1;
             remoteLockers = new RemoteLocker[lockCreatorsCount];

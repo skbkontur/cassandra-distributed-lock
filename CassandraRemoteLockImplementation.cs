@@ -15,6 +15,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             lockTtl = settings.LockTtl;
             keepLockAliveInterval = settings.KeepLockAliveInterval;
             lockRepository = new CassandraLockRepository(cassandraCluster, serializer, settings.ColumnFamilyFullName);
+            changeLockRowThreshold = settings.ChangeLockRowThreshold;
         }
 
         public TimeSpan KeepLockAliveInterval { get { return keepLockAliveInterval; } }
@@ -26,7 +27,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var result = lockRepository.TryLock(lockMetadata, threadId, lockTtl, singleOperationTimeout + lockTtl);
             if(result.Status == LockAttemptStatus.Success)
             {
-                if(lockMetadata.LockCount > 1000)
+                if(lockMetadata.LockCount > changeLockRowThreshold)
                 {
                     var newLockMetadata = GenerateNewLockMetadata();
 
@@ -87,5 +88,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly TimeSpan singleOperationTimeout;
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;
+        private readonly int changeLockRowThreshold;
     }
 }

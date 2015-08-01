@@ -56,6 +56,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 using(remoteLock)
                 {
                     logger.Info("MakeLock with threadId: " + remoteLock.ThreadId);
+                    Thread.Sleep(1000);
                     CheckLocks(remoteLock.ThreadId);
                     Assert.AreEqual(0, ReadX());
                     logger.Info("Increment");

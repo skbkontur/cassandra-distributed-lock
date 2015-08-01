@@ -22,22 +22,22 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public string[] GetThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return Search(GetMainRowKey(lockMetadata.LockRowId));
+            return SearchThreadsInRow(GetMainRowKey(lockMetadata.LockRowId));
         }
 
         public string[] GetShadowThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return Search(GetShadowRowKey(lockMetadata.LockRowId));
+            return SearchThreadsInRow(GetShadowRowKey(lockMetadata.LockRowId));
         }
 
         public void UnlockRow(LockMetadata lockMetadata, string threadId)
         {
-            Delete(GetMainRowKey(lockMetadata.LockRowId), threadId);
+            DeleteThreadFromRow(GetMainRowKey(lockMetadata.LockRowId), threadId);
         }
 
         public void RelockRow(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl)
         {
-            WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, lockTtl);
+            WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, lockTtl);
         }
 
         public LockAttemptResult TryLock(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl, TimeSpan ttl)
@@ -55,30 +55,30 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var beforeOurWriteShades = GetShadowThreadsInLockRow(lockMetadata);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteLockRow(GetShadowRowKey(lockMetadata.LockRowId), threadId, lockTtl);
+            WriteThreadToRow(GetShadowRowKey(lockMetadata.LockRowId), threadId, lockTtl);
             var shades = GetShadowThreadsInLockRow(lockMetadata);
             if(shades.Length == 1)
             {
                 items = GetThreadsInLockRow(lockMetadata);
                 if(items.Length == 0)
                 {
-                    WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
-                    Delete(GetShadowRowKey(lockMetadata.LockRowId), threadId);
+                    WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+                    DeleteThreadFromRow(GetShadowRowKey(lockMetadata.LockRowId), threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            Delete(GetShadowRowKey(lockMetadata.LockRowId), threadId);
+            DeleteThreadFromRow(GetShadowRowKey(lockMetadata.LockRowId), threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
         public void UpdateLockRowTtl(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+            WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
 
         public void LockRowUnSafe(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteLockRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+            WriteThreadToRow(GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
         }
 
         public void WriteLockMetadata(string lockId, LockMetadata lockMetadata)
@@ -154,7 +154,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return "Metadata_" + lockId;
         }
 
-        private void WriteLockRow(string rowName, string threadId, TimeSpan ttl)
+        private void WriteThreadToRow(string rowName, string threadId, TimeSpan ttl)
         {
             MakeInConnection(connection => connection.AddColumn(rowName, new Column
                 {
@@ -165,7 +165,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 }));
         }
 
-        private string[] Search(string rowName)
+        private string[] SearchThreadsInRow(string rowName)
         {
             var res = new string[0];
             MakeInConnection(connection =>
@@ -195,7 +195,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             action(connection);
         }
 
-        private void Delete(string rowName, string threadId)
+        private void DeleteThreadFromRow(string rowName, string threadId)
         {
             MakeInConnection(connection => connection.DeleteBatch(rowName, new[] {threadId}, GetNowTicks()));
         }

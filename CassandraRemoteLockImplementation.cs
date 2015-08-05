@@ -35,17 +35,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     newLockMetadata.LockCount = 1;
                     newLockMetadata.LockRowId = Guid.NewGuid().ToString();
 
-                    lockRepository.UpdateLockRowTtl(lockMetadata, threadId, singleOperationTimeout.Multiply(3));
-                    lockRepository.RelockRow(newLockMetadata, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
-                    lockRepository.WriteLockMetadata(lockId, newLockMetadata);
-                    lockRepository.UpdateLockRowTtl(lockMetadata, threadId, TimeSpan.FromDays(7));
+                    baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.CurrentThreshold, threadId, singleOperationTimeout.Multiply(3));
+                    baseOperationsPerformer.WriteThread(newLockMetadata.LockRowId.ToMainRowKey(), newLockMetadata.PreviousThreshold, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
+                    baseOperationsPerformer.WriteLockMetadata(lockId.ToLockMetadataRowKey(), newLockMetadata);
+                    baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.CurrentThreshold, threadId, TimeSpan.FromDays(7));
 
                     return LockAttemptResult.Success();
                 }
 
                 newLockMetadata.LockCount = lockMetadata.LockCount + 1;
                 newLockMetadata.LockRowId = lockMetadata.LockRowId;
-                lockRepository.WriteLockMetadata(lockId, newLockMetadata);
+                baseOperationsPerformer.WriteLockMetadata(lockId.ToLockMetadataRowKey(), newLockMetadata);
             }
 
             return result;
@@ -54,30 +54,30 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public void Unlock(string lockId, string threadId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            lockRepository.UnlockRow(lockMetadata, threadId);
+            baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold, threadId);
         }
 
         public void Relock(string lockId, string threadId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            lockRepository.RelockRow(lockMetadata, threadId, lockTtl);
+            baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold, threadId, lockTtl);
         }
 
         public string[] GetLockThreads(string lockId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            return lockRepository.GetThreadsInLockRow(lockMetadata);
+            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
         }
 
         public string[] GetShadeThreads(string lockId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            return lockRepository.GetShadowThreadsInLockRow(lockMetadata);
+            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
         }
 
         private LockMetadata GetOrCreateLockMetadata(string lockId)
         {
-            var result = lockRepository.GetLockMetadata(lockId, lockId);
+            var result = baseOperationsPerformer.GetLockMetadata(lockId.ToLockMetadataRowKey(), lockId);
             return result ?? new LockMetadata {LockCount = 0, LockRowId = lockId};
         }
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 
 using GroBuf;
 
@@ -15,7 +14,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = settings.LockTtl;
             keepLockAliveInterval = settings.KeepLockAliveInterval;
-            lockRepository = new CassandraLockRepository(cassandraCluster, serializer, settings.ColumnFamilyFullName);
+            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings.ColumnFamilyFullName);
+            lockRepository = new CassandraLockRepository(baseOperationsPerformer);
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
         }
 
@@ -99,5 +99,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;
+        private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;
     }
 }

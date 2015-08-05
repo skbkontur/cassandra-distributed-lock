@@ -1,38 +1,33 @@
 ﻿using System;
 using System.Linq;
 
-using GroBuf;
-
-using SKBKontur.Cassandra.CassandraClient.Clusters;
-using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
-
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal class CassandraLockRepository
     {
-        public CassandraLockRepository(ICassandraCluster cassandraCluster, ISerializer serializer, ColumnFamilyFullName columnFamilyFullName)
+        public CassandraLockRepository(CassandraBaseLockOperationsPerformer baseOperationsPerformer)
         {
-            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, columnFamilyFullName);
+            this.baseOperationsPerformer = baseOperationsPerformer;
         }
 
         public string[] GetThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return baseOperationsPerformer.SeatchThreads(GetMainRowKey(lockMetadata.LockRowId), GetThreshold(lockMetadata.PreviousLockOwner));
+            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), GetThreshold(lockMetadata.PreviousLockOwner));
         }
 
         public string[] GetShadowThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return baseOperationsPerformer.SeatchThreads(GetShadowRowKey(lockMetadata.LockRowId), GetThreshold(lockMetadata.CurrentLockOwner));
+            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), GetThreshold(lockMetadata.CurrentLockOwner));
         }
 
         public void UnlockRow(LockMetadata lockMetadata, string threadId)
         {
-            baseOperationsPerformer.DeleteThread(GetMainRowKey(lockMetadata.LockRowId), GetThreshold(lockMetadata.PreviousLockOwner), threadId);
+            baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToMainRowKey(), GetThreshold(lockMetadata.PreviousLockOwner), threadId);
         }
 
         public void RelockRow(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl)
         {
-            baseOperationsPerformer.WriteThread(GetMainRowKey(lockMetadata.LockRowId), GetThreshold(lockMetadata.PreviousLockOwner), threadId, lockTtl);
+            baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), GetThreshold(lockMetadata.PreviousLockOwner), threadId, lockTtl);
         }
 
         public LockAttemptResult TryLock(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl, TimeSpan ttl)
@@ -50,50 +45,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var beforeOurWriteShades = GetShadowThreadsInLockRow(lockMetadata);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteThreadToRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId), threadId, lockTtl);
+            WriteThreadToRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToShadowRowKey(), threadId, lockTtl);
             var shades = GetShadowThreadsInLockRow(lockMetadata);
             if(shades.Length == 1)
             {
                 items = GetThreadsInLockRow(lockMetadata);
                 if(items.Length == 0)
                 {
-                    WriteThreadToRow(lockMetadata.CurrentLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
-                    DeleteThreadFromRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId), threadId);
+                    WriteThreadToRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToMainRowKey(), threadId, ttl);
+                    DeleteThreadFromRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToShadowRowKey(), threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            DeleteThreadFromRow(lockMetadata.CurrentLockOwner, GetShadowRowKey(lockMetadata.LockRowId), threadId);
+            DeleteThreadFromRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToShadowRowKey(), threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
         public void UpdateLockRowTtl(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteThreadToRow(lockMetadata.CurrentLockOwner, GetMainRowKey(lockMetadata.LockRowId), threadId, ttl);
+            WriteThreadToRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToMainRowKey(), threadId, ttl);
         }
 
         public void WriteLockMetadata(string lockId, LockMetadata lockMetadata)
         {
-            baseOperationsPerformer.WriteLockMetadata(GetLockMetadataRowKey(lockId), lockMetadata);
+            baseOperationsPerformer.WriteLockMetadata(lockId.ToLockMetadataRowKey(), lockMetadata);
         }
 
         public LockMetadata GetLockMetadata(string lockId, string defaultLockRowId)
         {
-            return baseOperationsPerformer.GetLockMetadata(GetLockMetadataRowKey(lockId), defaultLockRowId);
-        }
-
-        private static string GetShadowRowKey(string lockId)
-        {
-            return "Shade_" + lockId;
-        }
-
-        private static string GetMainRowKey(string lockId)
-        {
-            return "Main_" + lockId;
-        }
-
-        private static string GetLockMetadataRowKey(string lockId)
-        {
-            return "Metadata_" + lockId;
+            return baseOperationsPerformer.GetLockMetadata(lockId.ToLockMetadataRowKey(), defaultLockRowId);
         }
 
         private void WriteThreadToRow(LockOwner lockOwner, string rowName, string threadId, TimeSpan ttl)

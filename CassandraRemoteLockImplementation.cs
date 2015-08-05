@@ -28,24 +28,20 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var result = RunBattle(lockMetadata, threadId);
             if(result.Status == LockAttemptStatus.Success)
             {
-                var newLockMetadata = NewLockMetadata(lockMetadata, threadId);
-
                 if(lockMetadata.LockCount > changeLockRowThreshold)
                 {
-                    newLockMetadata.LockCount = 1;
-                    newLockMetadata.LockRowId = Guid.NewGuid().ToString();
+                    var newLockMetadata = new LockMetadata(lockId, Guid.NewGuid().ToString(), 1, lockMetadata.CurrentThreshold, NewThreshold(lockMetadata));
 
-                    baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.CurrentThreshold, threadId, singleOperationTimeout.Multiply(3));
-                    baseOperationsPerformer.WriteThread(newLockMetadata.LockRowId.ToMainRowKey(), newLockMetadata.PreviousThreshold, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
-                    baseOperationsPerformer.WriteLockMetadata(lockId.ToLockMetadataRowKey(), newLockMetadata);
-                    baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.CurrentThreshold, threadId, TimeSpan.FromDays(7));
+                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), lockMetadata.CurrentThreshold, threadId, singleOperationTimeout.Multiply(3));
+                    baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newLockMetadata.PreviousThreshold, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
+                    baseOperationsPerformer.WriteLockMetadata(lockMetadata.MetadataRowKey(), newLockMetadata);
+                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), lockMetadata.CurrentThreshold, threadId, TimeSpan.FromDays(7));
 
                     return LockAttemptResult.Success();
                 }
 
-                newLockMetadata.LockCount = lockMetadata.LockCount + 1;
-                newLockMetadata.LockRowId = lockMetadata.LockRowId;
-                baseOperationsPerformer.WriteLockMetadata(lockId.ToLockMetadataRowKey(), newLockMetadata);
+                baseOperationsPerformer.WriteLockMetadata(lockMetadata.MetadataRowKey(),
+                    new LockMetadata(lockId, lockMetadata.LockRowId, lockMetadata.LockCount + 1, lockMetadata.CurrentThreshold, NewThreshold(lockMetadata)));
             }
 
             return result;
@@ -53,7 +49,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private LockAttemptResult RunBattle(LockMetadata lockMetadata, string threadId)
         {
-            var items = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
+            var items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
             if (items.Length == 1)
                 return items[0] == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(items[0]);
             if (items.Length > 1)
@@ -63,62 +59,58 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
 
-            var beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
+            var beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.CurrentThreshold);
             if (beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold, threadId, lockTtl);
-            var shades = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
+            baseOperationsPerformer.WriteThread(lockMetadata.ShadowRowKey(), lockMetadata.CurrentThreshold, threadId, lockTtl);
+            var shades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.CurrentThreshold);
             if (shades.Length == 1)
             {
-                items = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
+                items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
                 if (items.Length == 0)
                 {
-                    baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.CurrentThreshold, threadId, singleOperationTimeout + lockTtl);
-                    baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold, threadId);
+                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), lockMetadata.CurrentThreshold, threadId, singleOperationTimeout + lockTtl);
+                    baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), lockMetadata.CurrentThreshold, threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold, threadId);
+            baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), lockMetadata.CurrentThreshold, threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
         public void Unlock(string lockId, string threadId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold, threadId);
+            baseOperationsPerformer.DeleteThread(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold, threadId);
         }
 
         public void Relock(string lockId, string threadId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold, threadId, lockTtl);
+            baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold, threadId, lockTtl);
         }
 
         public string[] GetLockThreads(string lockId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            return baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
+            return baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
         }
 
         public string[] GetShadeThreads(string lockId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            return baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
+            return baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.CurrentThreshold);
         }
 
         private LockMetadata GetOrCreateLockMetadata(string lockId)
         {
             var result = baseOperationsPerformer.GetLockMetadata(lockId.ToLockMetadataRowKey(), lockId);
-            return result ?? new LockMetadata {LockCount = 0, LockRowId = lockId};
+            return result ?? new LockMetadata(lockId, lockId, 0, null, null);
         }
 
-        private LockMetadata NewLockMetadata(LockMetadata currentLockMetadata, string threadId)
+        private long NewThreshold(LockMetadata lockMetadata)
         {
-            return new LockMetadata
-                {
-                    PreviousThreshold = currentLockMetadata.CurrentThreshold,
-                    CurrentThreshold = Math.Max(DateTime.UtcNow.Ticks, currentLockMetadata.CurrentThreshold ?? 0)
-                };
+            return Math.Max(DateTime.UtcNow.Ticks, lockMetadata.CurrentThreshold ?? 0);
         }
 
         private readonly TimeSpan singleOperationTimeout;

@@ -2,8 +2,25 @@
 {
     internal class LockMetadata
     {
-        public string LockRowId { get; set; }
-        public int LockCount { get; set; }
+        public LockMetadata(
+            string lockId,
+            string lockRowId, 
+            int lockCount, 
+            long? previousThreshold, 
+            long? currentThreshold)
+        {
+            LockId = lockId;
+            LockRowId = lockRowId;
+            LockCount = lockCount;
+            PreviousThreshold = previousThreshold;
+            CurrentThreshold = currentThreshold;
+        }
+
+        public string LockRowId { get; private set; }
+
+        public int LockCount { get; private set; }
+
+        public string LockId { get; private set; }
 
         /*
          * This is optimization properties for repeating locks (locks that used several times).
@@ -16,7 +33,7 @@
          * And so we can avoid scanning all the row and scan only columns >= {threshold} thereby decreasing the number of processed old SSTables and tombstones
          * during get_slice request.
          */
-        public long? PreviousThreshold { get; set; }
-        public long? CurrentThreshold { get; set; }
+        public long? PreviousThreshold { get; private set; }
+        public long? CurrentThreshold { get; private set; }
     }
 }

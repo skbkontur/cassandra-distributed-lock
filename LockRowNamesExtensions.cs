@@ -2,16 +2,21 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal static class LockRowNamesExtensions
     {
-        public static string ToMainRowKey(this string lockRowId)
+        public static string MainRowKey(this LockMetadata lockMetadata)
         {
-            return "Main_" + lockRowId;
+            return "Main_" + lockMetadata.LockRowId;
         }
 
-        public static string ToShadowRowKey(this string lockRowId)
+        public static string ShadowRowKey(this LockMetadata lockMetadata)
         {
-            return "Shade_" + lockRowId;
+            return "Shade_" + lockMetadata.LockRowId;
         }
 
+        public static string MetadataRowKey(this LockMetadata lockMetadata)
+        {
+            return lockMetadata.LockId.ToLockMetadataRowKey();
+        }
+        
         public static string ToLockMetadataRowKey(this string lockId)
         {
             return "Metadata_" + lockId;

@@ -96,19 +96,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     var columns = connection.GetColumns(lockMetadataRowId, new[] {"LockCount", "LockRowId", "PreviousLockOwner", "CurrentLockOwner"});
                     if(columns.Any(x => x.Name == "LockCount"))
                     {
-                        res = new LockMetadata
-                            {
-                                LockCount = serializer.Deserialize<int>(columns.First(x => x.Name == "LockCount").Value),
-                                LockRowId = columns.Any(x => x.Name == "LockRowId")
-                                                ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
-                                                : defaultLockRowId,
-                                PreviousThreshold = columns.Any(x => x.Name == "PreviousLockOwner")
-                                                        ? serializer.Deserialize<long>(columns.First(x => x.Name == "PreviousLockOwner").Value)
-                                                        : (long?)null,
-                                CurrentThreshold = columns.Any(x => x.Name == "CurrentLockOwner")
-                                                       ? serializer.Deserialize<long>(columns.First(x => x.Name == "CurrentLockOwner").Value)
-                                                       : (long?)null
-                            };
+                        res = new LockMetadata(
+                            defaultLockRowId,
+                            columns.Any(x => x.Name == "LockRowId")
+                                ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
+                                : defaultLockRowId,
+                            serializer.Deserialize<int>(columns.First(x => x.Name == "LockCount").Value),
+                            columns.Any(x => x.Name == "PreviousLockOwner")
+                                ? serializer.Deserialize<long>(columns.First(x => x.Name == "PreviousLockOwner").Value)
+                                : (long?)null,
+                            columns.Any(x => x.Name == "CurrentLockOwner")
+                                ? serializer.Deserialize<long>(columns.First(x => x.Name == "CurrentLockOwner").Value)
+                                : (long?)null
+                            );
                     }
                 });
             return res;

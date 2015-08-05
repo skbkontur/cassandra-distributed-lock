@@ -53,7 +53,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private LockAttemptResult RunBattle(LockMetadata lockMetadata, string threadId)
         {
-            var items = baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
+            var items = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
             if (items.Length == 1)
                 return items[0] == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(items[0]);
             if (items.Length > 1)
@@ -63,14 +63,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
 
-            var beforeOurWriteShades = baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
+            var beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
             if (beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
             baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold, threadId, lockTtl);
-            var shades = baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
+            var shades = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
             if (shades.Length == 1)
             {
-                items = baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
+                items = baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
                 if (items.Length == 0)
                 {
                     baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.CurrentThreshold, threadId, singleOperationTimeout + lockTtl);
@@ -97,13 +97,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public string[] GetLockThreads(string lockId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
+            return baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
         }
 
         public string[] GetShadeThreads(string lockId)
         {
             var lockMetadata = GetOrCreateLockMetadata(lockId);
-            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
+            return baseOperationsPerformer.SearchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
         }
 
         private LockMetadata GetOrCreateLockMetadata(string lockId)

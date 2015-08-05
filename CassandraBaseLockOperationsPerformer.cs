@@ -37,7 +37,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             MakeInConnection(connection => connection.DeleteBatch(lockRowId, new[] {TransformThreadIdToColumnName(threshold, threadId)}, GetNowTicks()));
         }
 
-        public string[] SeatchThreads(string lockRowId, long? threshold)
+        public string[] SearchThreads(string lockRowId, long? threshold)
         {
             var res = new string[0];
             MakeInConnection(connection =>

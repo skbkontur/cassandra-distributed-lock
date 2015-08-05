@@ -49,7 +49,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return res;
         }
 
-        public void WriteLockMetadata(string lockMetadataRowId, LockMetadata lockMetadata)
+        public void WriteLockMetadata(LockMetadata lockMetadata)
         {
             var columns = new List<Column>
                 {
@@ -85,22 +85,22 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     });
             }
 
-            MakeInConnection(connection => connection.AddBatch(lockMetadataRowId, columns.ToArray()));
+            MakeInConnection(connection => connection.AddBatch(lockMetadata.LockId.ToLockMetadataRowKey(), columns.ToArray()));
         }
 
-        public LockMetadata GetLockMetadata(string lockMetadataRowId, string defaultLockRowId)
+        public LockMetadata GetLockMetadata(string lockId)
         {
             LockMetadata res = null;
             MakeInConnection(connection =>
                 {
-                    var columns = connection.GetColumns(lockMetadataRowId, new[] {"LockCount", "LockRowId", "PreviousLockOwner", "CurrentLockOwner"});
+                    var columns = connection.GetColumns(lockId.ToLockMetadataRowKey(), new[] {"LockCount", "LockRowId", "PreviousLockOwner", "CurrentLockOwner"});
                     if(columns.Any(x => x.Name == "LockCount"))
                     {
                         res = new LockMetadata(
-                            defaultLockRowId,
+                            lockId,
                             columns.Any(x => x.Name == "LockRowId")
                                 ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
-                                : defaultLockRowId,
+                                : lockId,
                             serializer.Deserialize<int>(columns.First(x => x.Name == "LockCount").Value),
                             columns.Any(x => x.Name == "PreviousLockOwner")
                                 ? serializer.Deserialize<long>(columns.First(x => x.Name == "PreviousLockOwner").Value)
@@ -111,7 +111,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                             );
                     }
                 });
-            return res;
+            return res ?? new LockMetadata(lockId, lockId, 0, null, null);
         }
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)

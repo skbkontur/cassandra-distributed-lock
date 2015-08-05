@@ -49,6 +49,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CassandraBaseLockOperationsPerformer.cs" />
     <Compile Include="RemoteLock.cs" />
     <Compile Include="RemoteLockCreator.cs" />
     <Compile Include="RemoteLocker\BoundedBlockingQueue.cs" />

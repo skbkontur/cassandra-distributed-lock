@@ -12,22 +12,22 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public string[] GetThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), GetThreshold(lockMetadata.PreviousLockOwner));
+            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold);
         }
 
         public string[] GetShadowThreadsInLockRow(LockMetadata lockMetadata)
         {
-            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), GetThreshold(lockMetadata.CurrentLockOwner));
+            return baseOperationsPerformer.SeatchThreads(lockMetadata.LockRowId.ToShadowRowKey(), lockMetadata.CurrentThreshold);
         }
 
         public void UnlockRow(LockMetadata lockMetadata, string threadId)
         {
-            baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToMainRowKey(), GetThreshold(lockMetadata.PreviousLockOwner), threadId);
+            baseOperationsPerformer.DeleteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold, threadId);
         }
 
         public void RelockRow(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl)
         {
-            baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), GetThreshold(lockMetadata.PreviousLockOwner), threadId, lockTtl);
+            baseOperationsPerformer.WriteThread(lockMetadata.LockRowId.ToMainRowKey(), lockMetadata.PreviousThreshold, threadId, lockTtl);
         }
 
         public LockAttemptResult TryLock(LockMetadata lockMetadata, string threadId, TimeSpan lockTtl, TimeSpan ttl)
@@ -45,25 +45,25 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var beforeOurWriteShades = GetShadowThreadsInLockRow(lockMetadata);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            WriteThreadToRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToShadowRowKey(), threadId, lockTtl);
+            WriteThreadToRow(lockMetadata.CurrentThreshold, lockMetadata.LockRowId.ToShadowRowKey(), threadId, lockTtl);
             var shades = GetShadowThreadsInLockRow(lockMetadata);
             if(shades.Length == 1)
             {
                 items = GetThreadsInLockRow(lockMetadata);
                 if(items.Length == 0)
                 {
-                    WriteThreadToRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToMainRowKey(), threadId, ttl);
-                    DeleteThreadFromRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToShadowRowKey(), threadId);
+                    WriteThreadToRow(lockMetadata.CurrentThreshold, lockMetadata.LockRowId.ToMainRowKey(), threadId, ttl);
+                    DeleteThreadFromRow(lockMetadata.CurrentThreshold, lockMetadata.LockRowId.ToShadowRowKey(), threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            DeleteThreadFromRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToShadowRowKey(), threadId);
+            DeleteThreadFromRow(lockMetadata.CurrentThreshold, lockMetadata.LockRowId.ToShadowRowKey(), threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
         public void UpdateLockRowTtl(LockMetadata lockMetadata, string threadId, TimeSpan ttl)
         {
-            WriteThreadToRow(lockMetadata.CurrentLockOwner, lockMetadata.LockRowId.ToMainRowKey(), threadId, ttl);
+            WriteThreadToRow(lockMetadata.CurrentThreshold, lockMetadata.LockRowId.ToMainRowKey(), threadId, ttl);
         }
 
         public void WriteLockMetadata(string lockId, LockMetadata lockMetadata)
@@ -76,19 +76,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return baseOperationsPerformer.GetLockMetadata(lockId.ToLockMetadataRowKey(), defaultLockRowId);
         }
 
-        private void WriteThreadToRow(LockOwner lockOwner, string rowName, string threadId, TimeSpan ttl)
+        private void WriteThreadToRow(long? threshold, string rowName, string threadId, TimeSpan ttl)
         {
-            baseOperationsPerformer.WriteThread(rowName, GetThreshold(lockOwner), threadId, ttl);
+            baseOperationsPerformer.WriteThread(rowName, threshold, threadId, ttl);
         }
 
-        private void DeleteThreadFromRow(LockOwner lockOwner, string rowName, string threadId)
+        private void DeleteThreadFromRow(long? threshold, string rowName, string threadId)
         {
-            baseOperationsPerformer.DeleteThread(rowName, GetThreshold(lockOwner), threadId);
-        }
-
-        private static long? GetThreshold(LockOwner lockOwner)
-        {
-            return lockOwner == null ? (long?)null : lockOwner.LockRowThreshold;
+            baseOperationsPerformer.DeleteThread(rowName, threshold, threadId);
         }
 
         private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;

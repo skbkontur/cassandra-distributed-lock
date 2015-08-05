@@ -85,12 +85,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             return new LockMetadata
                 {
-                    PreviousLockOwner = currentLockMetadata.CurrentLockOwner,
-                    CurrentLockOwner = new LockOwner
-                        {
-                            ThreadId = threadId,
-                            LockRowThreshold = Math.Max(DateTime.UtcNow.Ticks, currentLockMetadata.CurrentLockOwner == null ? 0 : currentLockMetadata.CurrentLockOwner.LockRowThreshold)
-                        }
+                    PreviousThreshold = currentLockMetadata.CurrentThreshold,
+                    CurrentThreshold = Math.Max(DateTime.UtcNow.Ticks, currentLockMetadata.CurrentThreshold ?? 0)
                 };
         }
 

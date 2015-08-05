@@ -66,21 +66,21 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                             Timestamp = GetNowTicks()
                         }
                 };
-            if(lockMetadata.PreviousLockOwner != null)
+            if(lockMetadata.PreviousThreshold != null)
             {
                 columns.Add(new Column
                     {
                         Name = "PreviousLockOwner",
-                        Value = serializer.Serialize(lockMetadata.PreviousLockOwner),
+                        Value = serializer.Serialize(lockMetadata.PreviousThreshold),
                         Timestamp = GetNowTicks()
                     });
             }
-            if(lockMetadata.CurrentLockOwner != null)
+            if(lockMetadata.CurrentThreshold != null)
             {
                 columns.Add(new Column
                     {
                         Name = "CurrentLockOwner",
-                        Value = serializer.Serialize(lockMetadata.CurrentLockOwner),
+                        Value = serializer.Serialize(lockMetadata.CurrentThreshold),
                         Timestamp = GetNowTicks()
                     });
             }
@@ -102,12 +102,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                                 LockRowId = columns.Any(x => x.Name == "LockRowId")
                                                 ? serializer.Deserialize<string>(columns.First(x => x.Name == "LockRowId").Value)
                                                 : defaultLockRowId,
-                                PreviousLockOwner = columns.Any(x => x.Name == "PreviousLockOwner")
-                                                        ? serializer.Deserialize<LockOwner>(columns.First(x => x.Name == "PreviousLockOwner").Value)
-                                                        : null,
-                                CurrentLockOwner = columns.Any(x => x.Name == "CurrentLockOwner")
-                                                       ? serializer.Deserialize<LockOwner>(columns.First(x => x.Name == "CurrentLockOwner").Value)
-                                                       : null
+                                PreviousThreshold = columns.Any(x => x.Name == "PreviousLockOwner")
+                                                        ? serializer.Deserialize<long>(columns.First(x => x.Name == "PreviousLockOwner").Value)
+                                                        : (long?)null,
+                                CurrentThreshold = columns.Any(x => x.Name == "CurrentLockOwner")
+                                                       ? serializer.Deserialize<long>(columns.First(x => x.Name == "CurrentLockOwner").Value)
+                                                       : (long?)null
                             };
                     }
                 });

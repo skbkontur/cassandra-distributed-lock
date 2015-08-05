@@ -16,13 +16,7 @@
          * And so we can avoid scanning all the row and scan only columns >= {threshold} thereby decreasing the number of processed old SSTables and tombstones
          * during get_slice request.
          */
-        public LockOwner PreviousLockOwner { get; set; }
-        public LockOwner CurrentLockOwner { get; set; }
-    }
-
-    internal class LockOwner
-    {
-        public string ThreadId { get; set; }
-        public long LockRowThreshold { get; set; }
+        public long? PreviousThreshold { get; set; }
+        public long? CurrentThreshold { get; set; }
     }
 }

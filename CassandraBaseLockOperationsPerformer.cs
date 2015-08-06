@@ -51,19 +51,20 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public void WriteLockMetadata(LockMetadata lockMetadata)
         {
+            var nowTicks = GetNowTicks();
             var columns = new List<Column>
                 {
                     new Column
                         {
                             Name = "LockRowId",
                             Value = serializer.Serialize(lockMetadata.LockRowId),
-                            Timestamp = GetNowTicks()
+                            Timestamp = nowTicks
                         },
                     new Column
                         {
                             Name = "LockCount",
                             Value = serializer.Serialize(lockMetadata.LockCount),
-                            Timestamp = GetNowTicks()
+                            Timestamp = nowTicks
                         }
                 };
             if(lockMetadata.PreviousThreshold != null)
@@ -72,7 +73,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     {
                         Name = "PreviousLockOwner",
                         Value = serializer.Serialize(lockMetadata.PreviousThreshold),
-                        Timestamp = GetNowTicks()
+                        Timestamp = nowTicks
                     });
             }
             if(lockMetadata.CurrentThreshold != null)
@@ -81,7 +82,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     {
                         Name = "CurrentLockOwner",
                         Value = serializer.Serialize(lockMetadata.CurrentThreshold),
-                        Timestamp = GetNowTicks()
+                        Timestamp = nowTicks
                     });
             }
 

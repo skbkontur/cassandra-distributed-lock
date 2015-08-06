@@ -103,7 +103,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     var currentThreshold = columns.Any(x => x.Name == "CurrentLockOwner")
                                                ? serializer.Deserialize<long>(columns.First(x => x.Name == "CurrentLockOwner").Value)
                                                : (long?)null;
-                    res = new LockMetadata(lockId,lockRowId,lockCount,previousThreshold,currentThreshold);
+                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, currentThreshold);
                 });
             return res ?? new LockMetadata(lockId, lockId, 0, null, null);
         }
@@ -130,9 +130,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             if(string.IsNullOrEmpty(threadId))
                 throw new ArgumentException("Empty ThreadId is not supported", "threadId");
-            if(threadId.Contains(delimiterSpecialSymbol))
-                throw new ArgumentException(string.Format("ThreadId cannot contains '{0}' symbol", delimiterSpecialSymbol), "threadId");
-            return threshold == null ? threadId : (ThresholdToString(threshold) + delimiterSpecialSymbol + threadId);
+            return threshold == null ?
+                       threadId :
+                       threadIdWasThresholdedIndicator + ':' + ThresholdToString(threshold) + ':' + threadId;
         }
 
         private static string ThresholdToString(long? threshold)
@@ -142,10 +142,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private static string TransformColumnNameToThreadId(string columnName)
         {
-            return columnName.Contains(delimiterSpecialSymbol) ? columnName.Split(delimiterSpecialSymbol)[1] : columnName;
+            return columnName.StartsWith(threadIdWasThresholdedIndicator) ? columnName.Substring(thresholdedThreadTechnicalPrefixLength) : columnName;
         }
 
-        private const char delimiterSpecialSymbol = ':';
+        private const string threadIdWasThresholdedIndicator = "91075218575b4c14bc88ce8b00fe9946";
+        private static readonly int thresholdedThreadTechnicalPrefixLength = threadIdWasThresholdedIndicator.Length + 22;
+        
         private readonly ICassandraCluster cassandraCluster;
         private readonly ISerializer serializer;
         private readonly ColumnFamilyFullName columnFamilyFullName;

@@ -76,15 +76,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                         Timestamp = nowTicks
                     });
             }
-            if(lockMetadata.CurrentThreshold != null)
-            {
-                columns.Add(new Column
-                    {
-                        Name = "CurrentLockOwner",
-                        Value = serializer.Serialize(lockMetadata.CurrentThreshold),
-                        Timestamp = nowTicks
-                    });
-            }
 
             MakeInConnection(connection => connection.AddBatch(lockMetadata.LockId.ToLockMetadataRowKey(), columns.ToArray()));
         }
@@ -101,12 +92,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     var previousThreshold = columns.Any(x => x.Name == "PreviousLockOwner")
                                                 ? serializer.Deserialize<long>(columns.First(x => x.Name == "PreviousLockOwner").Value)
                                                 : (long?)null;
-                    var currentThreshold = columns.Any(x => x.Name == "CurrentLockOwner")
-                                               ? serializer.Deserialize<long>(columns.First(x => x.Name == "CurrentLockOwner").Value)
-                                               : (long?)null;
-                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, currentThreshold);
+                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold);
                 });
-            return res ?? new LockMetadata(lockId, lockId, 0, null, null);
+            return res ?? new LockMetadata(lockId, lockId, 0, null);
         }
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)

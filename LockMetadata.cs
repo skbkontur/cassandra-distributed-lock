@@ -6,14 +6,12 @@
             string lockId,
             string lockRowId, 
             int lockCount, 
-            long? previousThreshold, 
-            long? currentThreshold)
+            long? previousThreshold)
         {
             LockId = lockId;
             LockRowId = lockRowId;
             LockCount = lockCount;
             PreviousThreshold = previousThreshold;
-            CurrentThreshold = currentThreshold;
         }
 
         public string LockRowId { get; private set; }
@@ -23,7 +21,7 @@
         public string LockId { get; private set; }
 
         /*
-         * This is optimization properties for repeating locks (locks that used several times).
+         * This is optimization property for repeating locks (locks that used several times).
          * According to CASSANDRA-5514, we can skip processing many SSTables during get_slice request using "min/max columns" optimization.
          * In lock implementation, we doing get_slice request on same row as many times as TryLock calls. 
          * And we scanning all the row, processing old SSTables and tombstones.
@@ -34,6 +32,5 @@
          * during get_slice request.
          */
         public long? PreviousThreshold { get; private set; }
-        public long? CurrentThreshold { get; private set; }
     }
 }

@@ -53,6 +53,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var resources = new ConcurrentDictionary<string, Guid>();
             using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
             {
+                var localTester = tester;
                 var actions = new Action[threads];
                 for(var th = 0; th < actions.Length; th++)
                 {
@@ -60,6 +61,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     actions[th] = () =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
+                            long? previousThreshold = 0L;
                             for(var op = 0; op < operationsPerThread; op++)
                             {
                                 var lockId = lockIds[rng.Next(lockIds.Length)];
@@ -71,6 +73,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                     opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
                                 Thread.Sleep(opDuration);
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
+                                CollectionAssert.AreEqual(new[] { @lock.ThreadId }, localTester.GetThreadsInMainRow(lockId));
+                                CollectionAssert.IsEmpty(localTester.GetThreadsInShadeRow(lockId));
+                                var threshold = localTester.GetThreshold(lockId);
+                                Assert.That(threshold, Is.Not.Null);
+                                Assert.That(threshold, Is.GreaterThan(previousThreshold));
+                                previousThreshold = threshold;
                                 @lock.Dispose();
                             }
                         };

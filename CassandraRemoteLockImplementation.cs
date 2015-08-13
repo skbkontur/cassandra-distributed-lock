@@ -102,6 +102,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
         }
 
+        public long? GetThresholdValue(string lockId)
+        {
+            var lockMetadata = baseOperationsPerformer.GetLockMetadata(lockId);
+            return lockMetadata.PreviousThreshold;
+        }
+
         private readonly TimeSpan singleOperationTimeout;
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;

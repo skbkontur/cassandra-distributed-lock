@@ -125,12 +125,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 throw new ArgumentException("Empty ThreadId is not supported", "threadId");
             return threshold == null ?
                        threadId :
-                       threadIdWasThresholdedIndicator + ':' + ThresholdToString(threshold) + ':' + threadId;
+                       ThresholdToString(threshold) + ':' + threadId;
         }
 
         private static string ThresholdToString(long? threshold)
         {
-            return threshold == null ? null : threshold.Value.ToString("D20");
+            return threshold == null ? null : threadIdWasThresholdedIndicator + ':' + threshold.Value.ToString("D20");
         }
 
         private static string TransformColumnNameToThreadId(string columnName)

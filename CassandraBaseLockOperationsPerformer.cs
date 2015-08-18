@@ -87,8 +87,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 {
                     var columns = connection.GetColumns(lockId.ToLockMetadataRowKey(), new[] {lockCountColumnName, lockRowIdColumnName, previousThresholdColumnName});
                     if(!columns.Any()) return;
-                    var lockRowId = serializer.Deserialize<string>(columns.First(x => x.Name == lockRowIdColumnName).Value);
-                    var lockCount = serializer.Deserialize<int>(columns.First(x => x.Name == lockCountColumnName).Value);
+                    var lockRowId = columns.Any(column => column.Name == lockRowIdColumnName) ?
+                                        serializer.Deserialize<string>(columns.First(x => x.Name == lockRowIdColumnName).Value) :
+                                        lockId;
+                    var lockCount = columns.Any(column => column.Name == lockCountColumnName) ?
+                                        serializer.Deserialize<int>(columns.First(x => x.Name == lockCountColumnName).Value) :
+                                        0;
                     var previousThreshold = columns.Any(x => x.Name == previousThresholdColumnName)
                                                 ? serializer.Deserialize<long>(columns.First(x => x.Name == previousThresholdColumnName).Value)
                                                 : (long?)null;

@@ -6,12 +6,14 @@
             string lockId,
             string lockRowId, 
             int lockCount, 
-            long? previousThreshold)
+            long? previousThreshold,
+            long? previousPersistedTimestamp)
         {
             LockId = lockId;
             LockRowId = lockRowId;
             LockCount = lockCount;
             PreviousThreshold = previousThreshold;
+            PreviousPersistedTimestamp = previousPersistedTimestamp;
         }
 
         public string LockRowId { get; private set; }
@@ -32,5 +34,7 @@
          * during get_slice request.
          */
         public long? PreviousThreshold { get; private set; }
+
+        public long? PreviousPersistedTimestamp { get; private set; }
     }
 }

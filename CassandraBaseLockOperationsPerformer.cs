@@ -51,20 +51,20 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public void WriteLockMetadata(LockMetadata lockMetadata)
         {
-            var nowTicks = GetNowTicks();
+            var newTimestamp = Math.Max(GetNowTicks(), lockMetadata.PreviousPersistedTimestamp + 1 ?? 0L);
             var columns = new List<Column>
                 {
                     new Column
                         {
                             Name = lockRowIdColumnName,
                             Value = serializer.Serialize(lockMetadata.LockRowId),
-                            Timestamp = nowTicks
+                            Timestamp = newTimestamp
                         },
                     new Column
                         {
                             Name = lockCountColumnName,
                             Value = serializer.Serialize(lockMetadata.LockCount),
-                            Timestamp = nowTicks
+                            Timestamp = newTimestamp
                         }
                 };
             if(lockMetadata.PreviousThreshold != null)
@@ -73,7 +73,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     {
                         Name = previousThresholdColumnName,
                         Value = serializer.Serialize(lockMetadata.PreviousThreshold),
-                        Timestamp = nowTicks
+                        Timestamp = newTimestamp
                     });
             }
 
@@ -96,9 +96,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     var previousThreshold = columns.Any(x => x.Name == previousThresholdColumnName)
                                                 ? serializer.Deserialize<long>(columns.First(x => x.Name == previousThresholdColumnName).Value)
                                                 : (long?)null;
-                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold);
+                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, columns.Max(column => column.Timestamp));
                 });
-            return res ?? new LockMetadata(lockId, lockId, 0, null);
+            return res ?? new LockMetadata(lockId, lockId, 0, null, null);
         }
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)

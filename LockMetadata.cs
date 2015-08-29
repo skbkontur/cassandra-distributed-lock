@@ -7,13 +7,15 @@
             string lockRowId, 
             int lockCount, 
             long? previousThreshold,
-            long? previousPersistedTimestamp)
+            long? previousPersistedTimestamp,
+            string probableOwnerThreadId)
         {
             LockId = lockId;
             LockRowId = lockRowId;
             LockCount = lockCount;
             PreviousThreshold = previousThreshold;
             PreviousPersistedTimestamp = previousPersistedTimestamp;
+            ProbableOwnerThreadId = probableOwnerThreadId;
         }
 
         public string LockRowId { get; private set; }
@@ -36,5 +38,13 @@
         public long? PreviousThreshold { get; private set; }
 
         public long? PreviousPersistedTimestamp { get; private set; }
+
+        /*
+         * This is optimization property for long locks.
+         * Thread that doesn't owns lock tries to get lock periodically.
+         * Without this property it leads to get_slice operation, which probably leads to scanning tombstones and reading sstables.
+         * But we can just check is it true that ProbableOwnerThreadId still owns lock and avoid get_slice in many cases.
+         */
+        public string ProbableOwnerThreadId { get; private set; }
     }
 }

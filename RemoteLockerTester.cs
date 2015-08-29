@@ -92,6 +92,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             return cassandraRemoteLockImplementation.GetThresholdValue(lockId);
         }
 
+        public string GetOwnerThreadId(string lockId)
+        {
+            return cassandraRemoteLockImplementation.GetOwnerThreadId(lockId);
+        }
+
         private IRemoteLockCreator GetRemoteLockCreator(RemoteLocker remoteLocker)
         {
             if(useSingleLockKeeperThread)

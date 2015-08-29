@@ -83,6 +83,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 var threshold = localTester.GetThreshold(lockId);
                                 Assert.That(threshold, Is.Not.Null);
                                 Assert.That(threshold, Is.GreaterThan(previousThresholds[lockIndex]));
+                                Assert.That(localTester.GetOwnerThreadId(lockId), Is.EqualTo(@lock.ThreadId));
                                 previousThresholds[lockIndex] = threshold;
                                 @lock.Dispose();
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));

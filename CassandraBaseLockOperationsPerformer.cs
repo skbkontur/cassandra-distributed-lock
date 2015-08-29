@@ -119,7 +119,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
                     res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, columns.Max(column => column.Timestamp), ownerThreadId);
                 });
-            return res ?? new LockMetadata(lockId, lockId, 0, null, null, null);
+            return res;
         }
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)

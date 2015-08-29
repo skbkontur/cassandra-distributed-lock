@@ -54,18 +54,22 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
             {
                 var localTester = tester;
-                var actions = new Action[threads];
+                var actions = new Action<MultithreadingTestHelper.RunState>[threads];
                 for(var th = 0; th < actions.Length; th++)
                 {
                     var remoteLockCreator = tester[th];
-                    actions[th] = () =>
+                    actions[th] = (state) =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
                             long? previousThreshold = 0L;
                             for(var op = 0; op < operationsPerThread; op++)
                             {
+                                if(state.ErrorOccurred)
+                                    break;
                                 var lockId = lockIds[rng.Next(lockIds.Length)];
-                                var @lock = Lock(remoteLockCreator, rng, lockId);
+                                var @lock = Lock(remoteLockCreator, rng, lockId, state);
+                                if(state.ErrorOccurred)
+                                    break;
                                 var resource = Guid.NewGuid();
                                 resources[lockId] = resource;
                                 var opDuration = TimeSpan.FromMilliseconds(16);
@@ -80,6 +84,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 Assert.That(threshold, Is.GreaterThan(previousThreshold));
                                 previousThreshold = threshold;
                                 @lock.Dispose();
+                                Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                             }
                         };
                 }
@@ -87,10 +92,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, Random rng, string lockId)
+        private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, Random rng, string lockId, MultithreadingTestHelper.RunState state)
         {
             IRemoteLock remoteLock;
-            while(!remoteLockCreator.TryGetLock(lockId, out remoteLock))
+            while(!remoteLockCreator.TryGetLock(lockId, out remoteLock) && !state.ErrorOccurred)
                 Thread.Sleep(rng.Next(32));
             return remoteLock;
         }

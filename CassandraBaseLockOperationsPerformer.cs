@@ -52,7 +52,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 {
                     var columns = connection.GetRow(lockRowId, ThresholdToString(threshold)).ToArray();
                     if (columns.Length != 0)
-                        res = columns.Where(x => x.Value != null && x.Value.Length != 0).Select(x => TransformColumnNameToThreadId(x.Name)).ToArray();
+                        res = columns.Where(x => x.Value != null && x.Value.Length != 0).Select(x => TransformColumnNameToThreadId(x.Name)).Distinct().ToArray();
                 });
             return res;
         }

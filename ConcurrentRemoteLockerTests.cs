@@ -50,6 +50,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, cassOpAttempts, cassOpTimeout),
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
+            var previousThresholds = Enumerable.Range(0, locks).Select(i => (long?)0L).ToArray();
             var resources = new ConcurrentDictionary<string, Guid>();
             using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
             {
@@ -61,12 +62,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     actions[th] = (state) =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
-                            long? previousThreshold = 0L;
                             for(var op = 0; op < operationsPerThread; op++)
                             {
                                 if(state.ErrorOccurred)
                                     break;
-                                var lockId = lockIds[rng.Next(lockIds.Length)];
+                                var lockIndex = rng.Next(lockIds.Length);
+                                var lockId = lockIds[lockIndex];
                                 var @lock = Lock(remoteLockCreator, rng, lockId, state);
                                 if(state.ErrorOccurred)
                                     break;
@@ -81,8 +82,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                 var threshold = localTester.GetThreshold(lockId);
                                 Assert.That(threshold, Is.Not.Null);
-                                Assert.That(threshold, Is.GreaterThan(previousThreshold));
-                                previousThreshold = threshold;
+                                Assert.That(threshold, Is.GreaterThan(previousThresholds[lockIndex]));
+                                previousThresholds[lockIndex] = threshold;
                                 @lock.Dispose();
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                             }

@@ -113,6 +113,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var lockMetadata = GetOrCreateLockMetadata(lockId);
             return lockMetadata.PreviousThreshold;
         }
+        
+        public string GetOwnerThreadId(string lockId)
+        {
+            var lockMetadata = GetOrCreateLockMetadata(lockId);
+            return lockMetadata.ProbableOwnerThreadId;
+        }
 
         private LockMetadata GetOrCreateLockMetadata(string lockId)
         {

@@ -102,7 +102,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             LockMetadata res = null;
             MakeInConnection(connection =>
                 {
-                    var columns = connection.GetColumns(lockId.ToLockMetadataRowKey(), new[] { lockCountColumnName, lockRowIdColumnName, previousThresholdColumnName });
+                    var columns = connection.GetColumns(lockId.ToLockMetadataRowKey(), new[] { lockCountColumnName, lockRowIdColumnName, previousThresholdColumnName, probableOwnerThreadIdColumnName });
                     if (!columns.Any()) return;
                     var lockRowId = columns.Any(column => column.Name == lockRowIdColumnName) ?
                                         serializer.Deserialize<string>(columns.First(x => x.Name == lockRowIdColumnName).Value) :

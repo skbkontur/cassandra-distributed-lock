@@ -78,7 +78,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 Thread.Sleep(opDuration);
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
                                 CollectionAssert.AreEqual(new[] { @lock.ThreadId }, localTester.GetThreadsInMainRow(lockId));
-                                CollectionAssert.IsEmpty(localTester.GetThreadsInShadeRow(lockId));
+                                Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                 var threshold = localTester.GetThreshold(lockId);
                                 Assert.That(threshold, Is.Not.Null);
                                 Assert.That(threshold, Is.GreaterThan(previousThreshold));

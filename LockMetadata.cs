@@ -1,12 +1,17 @@
-﻿namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+﻿using JetBrains.Annotations;
+
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal class LockMetadata
     {
         public LockMetadata(
+            [NotNull]
             string lockId,
+            [NotNull]
             string lockRowId, 
             int lockCount, 
-            long? previousThreshold,
+            long previousThreshold,
+            [NotNull]
             string probableOwnerThreadId)
         {
             LockId = lockId;
@@ -16,10 +21,12 @@
             ProbableOwnerThreadId = probableOwnerThreadId;
         }
 
+        [NotNull]
         public string LockRowId { get; private set; }
 
         public int LockCount { get; private set; }
 
+        [NotNull]
         public string LockId { get; private set; }
 
         /*
@@ -33,7 +40,7 @@
          * And so we can avoid scanning all the row and scan only columns >= {threshold} thereby decreasing the number of processed old SSTables and tombstones
          * during get_slice request.
          */
-        public long? PreviousThreshold { get; private set; }
+        public long PreviousThreshold { get; private set; }
 
         /*
          * This is optimization property for long locks.
@@ -41,6 +48,7 @@
          * Without this property it leads to get_slice operation, which probably leads to scanning tombstones and reading sstables.
          * But we can just check is it true that ProbableOwnerThreadId still owns lock and avoid get_slice in many cases.
          */
+        [NotNull]
         public string ProbableOwnerThreadId { get; private set; }
     }
 }

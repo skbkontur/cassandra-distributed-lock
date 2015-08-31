@@ -113,7 +113,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
         }
 
-        public long? GetThresholdValue(string lockId)
+        public long GetThresholdValue(string lockId)
         {
             long? timestamp;
             var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
@@ -138,7 +138,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private static long NewThreshold(LockMetadata lockMetadata)
         {
-            return Math.Max(DateTime.UtcNow.Ticks, lockMetadata.PreviousThreshold + 1 ?? 0);
+            return Math.Max(DateTime.UtcNow.Ticks, lockMetadata.PreviousThreshold + 1);
         }
 
         private readonly TimeSpan singleOperationTimeout;

@@ -27,7 +27,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             long? timestamp;
             var lockMetadata = baseOperationsPerformer.GetLockMetadata(lockId, out timestamp) ?? new LockMetadata(lockId, lockId, 0, (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks, "");
-            var newThreshold = NewThreshold(lockMetadata);
+            var newThreshold = NewThreshold(lockMetadata.PreviousThreshold);
 
             var result = RunBattle(lockMetadata, threadId, newThreshold);
             if(result.Status == LockAttemptStatus.Success)
@@ -99,7 +99,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 logger.Error("Call Relock, but LockMetadata not found. LockId = " + lockId);
                 return;
             }
-            var newThreshold = NewThreshold(lockMetadata);
+            var newThreshold = NewThreshold(lockMetadata.PreviousThreshold);
             var newLockMetadata = new LockMetadata(lockMetadata.LockId, lockMetadata.LockRowId, lockMetadata.LockCount, newThreshold, threadId);
             baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newLockMetadata.PreviousThreshold, threadId, lockTtl);
             baseOperationsPerformer.WriteLockMetadata(newLockMetadata, timestamp + 1);
@@ -138,9 +138,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return lockMetadata;
         }
 
-        private static long NewThreshold(LockMetadata lockMetadata)
+        private static long NewThreshold(long previousThreshold)
         {
-            return Math.Max(DateTime.UtcNow.Ticks, lockMetadata.PreviousThreshold + 1);
+            return Math.Max(DateTime.UtcNow.Ticks, previousThreshold + 1);
         }
 
         private readonly TimeSpan singleOperationTimeout;

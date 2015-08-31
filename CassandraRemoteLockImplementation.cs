@@ -54,7 +54,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             if(!string.IsNullOrEmpty(lockMetadata.ProbableOwnerThreadId) &&
                baseOperationsPerformer.ThreadAlive(lockMetadata.LockRowId, lockMetadata.PreviousThreshold, lockMetadata.ProbableOwnerThreadId))
+            {
+                if(lockMetadata.ProbableOwnerThreadId == threadId)
+                    return LockAttemptResult.Success();
                 return LockAttemptResult.AnotherOwner(lockMetadata.ProbableOwnerThreadId);
+            }
             var items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
             if (items.Length == 1)
                 return items[0] == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(items[0]);

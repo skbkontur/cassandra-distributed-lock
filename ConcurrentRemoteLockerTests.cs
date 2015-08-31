@@ -80,11 +80,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
                                 CollectionAssert.AreEqual(new[] { @lock.ThreadId }, localTester.GetThreadsInMainRow(lockId));
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
-                                var threshold = localTester.GetThreshold(lockId);
-                                Assert.That(threshold, Is.Not.Null);
-                                Assert.That(threshold, Is.GreaterThan(previousThresholds[lockIndex]));
-                                Assert.That(localTester.GetOwnerThreadId(lockId), Is.EqualTo(@lock.ThreadId));
-                                previousThresholds[lockIndex] = threshold;
+                                var lockMetadata = localTester.GetLockMetadata(lockId);
+                                Assert.That(lockMetadata.PreviousThreshold, Is.GreaterThan(previousThresholds[lockIndex]));
+                                previousThresholds[lockIndex] = lockMetadata.PreviousThreshold;
+                                Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
                                 @lock.Dispose();
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                             }

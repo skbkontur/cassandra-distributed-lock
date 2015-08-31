@@ -2,7 +2,7 @@
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
-    internal class LockMetadata
+    public class LockMetadata
     {
         public LockMetadata(
             [NotNull]

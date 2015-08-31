@@ -117,19 +117,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
         }
 
-        public long GetThresholdValue(string lockId)
-        {
-            var lockMetadata = GetLockMetadata(lockId);
-            return lockMetadata.PreviousThreshold;
-        }
-        
-        public string GetOwnerThreadId(string lockId)
-        {
-            var lockMetadata = GetLockMetadata(lockId);
-            return lockMetadata.ProbableOwnerThreadId;
-        }
-
-        private LockMetadata GetLockMetadata(string lockId)
+        public LockMetadata GetLockMetadata(string lockId)
         {
             long? timestamp;
             var lockMetadata = baseOperationsPerformer.GetLockMetadata(lockId, out timestamp);

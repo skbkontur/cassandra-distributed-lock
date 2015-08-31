@@ -57,9 +57,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return res;
         }
 
-        public void WriteLockMetadata(LockMetadata lockMetadata)
+        public void WriteLockMetadata(LockMetadata lockMetadata, long? minAcceptableTimestamp)
         {
-            var newTimestamp = Math.Max(GetNowTicks(), lockMetadata.PreviousPersistedTimestamp + 1 ?? 0L);
+            var newTimestamp = Math.Max(GetNowTicks(), minAcceptableTimestamp ?? 0L);
             var columns = new List<Column>
                 {
                     new Column
@@ -97,9 +97,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             MakeInConnection(connection => connection.AddBatch(lockMetadata.LockId.ToLockMetadataRowKey(), columns.ToArray()));
         }
 
-        public LockMetadata GetLockMetadata(string lockId)
+        public LockMetadata GetLockMetadata(string lockId, out long? persistedTimestamp)
         {
             LockMetadata res = null;
+            long? maxTimestamp = null;
             MakeInConnection(connection =>
                 {
                     var columns = connection.GetColumns(lockId.ToLockMetadataRowKey(), new[] { lockCountColumnName, lockRowIdColumnName, previousThresholdColumnName, probableOwnerThreadIdColumnName });
@@ -116,9 +117,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     var ownerThreadId = columns.Any(x => x.Name == probableOwnerThreadIdColumnName) ?
                                         serializer.Deserialize<string>(columns.First(x => x.Name == probableOwnerThreadIdColumnName).Value) :
                                         null;
-
-                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, columns.Max(column => column.Timestamp), ownerThreadId);
+                    maxTimestamp = columns.Max(column => column.Timestamp);
+                    res = new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, ownerThreadId);
                 });
+            persistedTimestamp = maxTimestamp;
             return res;
         }
 

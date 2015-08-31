@@ -7,14 +7,12 @@
             string lockRowId, 
             int lockCount, 
             long? previousThreshold,
-            long? previousPersistedTimestamp,
             string probableOwnerThreadId)
         {
             LockId = lockId;
             LockRowId = lockRowId;
             LockCount = lockCount;
             PreviousThreshold = previousThreshold;
-            PreviousPersistedTimestamp = previousPersistedTimestamp;
             ProbableOwnerThreadId = probableOwnerThreadId;
         }
 
@@ -36,8 +34,6 @@
          * during get_slice request.
          */
         public long? PreviousThreshold { get; private set; }
-
-        public long? PreviousPersistedTimestamp { get; private set; }
 
         /*
          * This is optimization property for long locks.

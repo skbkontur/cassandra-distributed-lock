@@ -3,6 +3,8 @@ using System.Linq;
 
 using GroBuf;
 
+using log4net;
+
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
@@ -24,7 +26,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public LockAttemptResult TryLock(string lockId, string threadId)
         {
             long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = baseOperationsPerformer.GetLockMetadata(lockId, out timestamp) ?? new LockMetadata(lockId, lockId, 0, (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks, "");
             var newThreshold = NewThreshold(lockMetadata);
 
             var result = RunBattle(lockMetadata, threadId, newThreshold);
@@ -84,15 +86,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public void Unlock(string lockId, string threadId)
         {
-            long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = GetLockMetadata(lockId);
             baseOperationsPerformer.DeleteThread(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold, threadId);
         }
 
         public void Relock(string lockId, string threadId)
         {
             long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = baseOperationsPerformer.GetLockMetadata(lockId, out timestamp);
+            if(lockMetadata == null)
+            {
+                logger.Error("Call Relock, but LockMetadata not found. LockId = " + lockId);
+                return;
+            }
             var newThreshold = NewThreshold(lockMetadata);
             var newLockMetadata = new LockMetadata(lockMetadata.LockId, lockMetadata.LockRowId, lockMetadata.LockCount, newThreshold, threadId);
             baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newLockMetadata.PreviousThreshold, threadId, lockTtl);
@@ -101,39 +107,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public string[] GetLockThreads(string lockId)
         {
-            long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = GetLockMetadata(lockId);
             return baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
         }
 
         public string[] GetShadeThreads(string lockId)
         {
-            long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = GetLockMetadata(lockId);
             return baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
         }
 
         public long GetThresholdValue(string lockId)
         {
-            long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = GetLockMetadata(lockId);
             return lockMetadata.PreviousThreshold;
         }
         
         public string GetOwnerThreadId(string lockId)
         {
-            long? timestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, out timestamp);
+            var lockMetadata = GetLockMetadata(lockId);
             return lockMetadata.ProbableOwnerThreadId;
         }
 
-        private LockMetadata GetOrCreateLockMetadata(string lockId, out long? persistedTimestamp)
+        private LockMetadata GetLockMetadata(string lockId)
         {
-            /*
-             * For performance reason default threshold for newly created LockMetadata (i.e. for new locks) is "now - one hour".
-             * This helps us to look only through recently created SSTables and makes acceptable any compaction strategy and compaction throughput.
-             */
-            return baseOperationsPerformer.GetLockMetadata(lockId, out persistedTimestamp) ?? new LockMetadata(lockId, lockId, 0, (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks, null);
+            long? timestamp;
+            var lockMetadata = baseOperationsPerformer.GetLockMetadata(lockId, out timestamp);
+            if (lockMetadata == null)
+                throw new Exception("Not found metadata for lockId = " + lockId);
+            return lockMetadata;
         }
 
         private static long NewThreshold(LockMetadata lockMetadata)
@@ -146,5 +148,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;
         private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;
+        private readonly ILog logger = LogManager.GetLogger(typeof(CassandraRemoteLockImplementation));
     }
 }

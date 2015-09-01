@@ -69,7 +69,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 var lockIndex = rng.Next(lockIds.Length);
                                 var lockId = lockIds[lockIndex];
                                 var @lock = Lock(remoteLockCreator, rng, lockId, state);
-                                if(state.ErrorOccurred)
+                                if(@lock == null)
                                     break;
                                 var resource = Guid.NewGuid();
                                 resources[lockId] = resource;

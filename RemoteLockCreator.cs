@@ -1,3 +1,5 @@
+using JetBrains.Annotations;
+
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class RemoteLockCreator : IRemoteLockCreator
@@ -7,12 +9,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             this.remoteLockImplementation = remoteLockImplementation;
         }
 
-        public IRemoteLock Lock(string lockId)
+        [NotNull]
+        public IRemoteLock Lock([NotNull] string lockId)
         {
             return new RemoteLock(remoteLockImplementation, lockId);
         }
 
-        public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
+        public bool TryGetLock([NotNull] string lockId, out IRemoteLock remoteLock)
         {
             string concurrentThreadId;
             var weakRemoteLock = new WeakRemoteLock(remoteLockImplementation, lockId, out concurrentThreadId);

@@ -1,12 +1,17 @@
 ﻿using System;
 
+using JetBrains.Annotations;
+
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public interface IRemoteLockImplementation
     {
         TimeSpan KeepLockAliveInterval { get; }
-        LockAttemptResult TryLock(string lockId, string threadId);
-        void Unlock(string lockId, string threadId);
-        void Relock(string lockId, string threadId);
+
+        [NotNull]
+        LockAttemptResult TryLock([NotNull] string lockId, [NotNull] string threadId);
+
+        bool TryUnlock([NotNull] string lockId, [NotNull] string threadId);
+        bool TryRelock([NotNull] string lockId, [NotNull] string threadId);
     }
 }

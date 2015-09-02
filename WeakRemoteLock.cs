@@ -71,7 +71,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     stopEvent.Set();
                     thread.Join();
                     stopEvent.Dispose();
-                    remoteLockImplementation.Unlock(lockId, threadId);
+                    if(!remoteLockImplementation.TryUnlock(lockId, threadId))
+                        logger.Error(string.Format("Cannot unlock. Possible lock metadata corruption for: LockId = {0}; ThreadId = {1}", lockId, threadId));
                 }
             }
             finally
@@ -121,11 +122,16 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                         logger.Error(string.Format("Difference between updates too large: {0}s. Update stopped", diff));
                         return;
                     }
-                    remoteLockImplementation.Relock(lockId, threadId);
-                    if(stopEvent.WaitOne(keepLockAliveInterval)) break;
+                    if(!remoteLockImplementation.TryRelock(lockId, threadId))
+                    {
+                        logger.Error(string.Format("Cannot relock. Possible lock metadata corruption for: LockId = {0}; ThreadId = {1}", lockId, threadId));
+                        return;
+                    }
+                    if(stopEvent.WaitOne(keepLockAliveInterval))
+                        break;
                     diff = DateTime.UtcNow - lastTicks;
                     if(diff > TimeSpan.FromSeconds(30))
-                        logger.WarnFormat(string.Format("Difference between updates too large: {0}s", diff));
+                        logger.WarnFormat("Difference between updates too large: {0}s", diff);
 
                     lastTicks = DateTime.UtcNow;
                 }

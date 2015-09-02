@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Threading;
 
+using JetBrains.Annotations;
+
 using log4net;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
@@ -22,7 +24,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             remoteLocksKeeperThread.Start();
         }
 
-        public IRemoteLock Lock(string lockId)
+        [NotNull]
+        public IRemoteLock Lock([NotNull] string lockId)
         {
             var threadId = Guid.NewGuid().ToString();
             Action<TimeSpan> finalAction = elapsed =>
@@ -47,7 +50,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             }
         }
 
-        public bool TryGetLock(string lockId, out IRemoteLock remoteLock)
+        public bool TryGetLock([NotNull] string lockId, out IRemoteLock remoteLock)
         {
             var threadId = Guid.NewGuid().ToString();
             Action<TimeSpan> finalAction = elapsed =>
@@ -184,7 +187,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 try
                 {
                     using(metrics.CassandraImplUnlockOp.NewContext(remoteLockState.ToString()))
-                        remoteLockImplementation.Unlock(remoteLockState.LockId, remoteLockState.ThreadId);
+                    {
+                        if(!remoteLockImplementation.TryUnlock(remoteLockState.LockId, remoteLockState.ThreadId))
+                            logger.Error(string.Format("Cannot unlock. Possible lock metadata corruption for: {0}", remoteLockState));
+                    }
                 }
                 catch(Exception e)
                 {
@@ -238,8 +244,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             {
                 if(!remoteLockState.NextKeepAliveMoment.HasValue)
                     return;
-                Relock(remoteLockState);
-                if(!remoteLocksQueue.IsAddingCompleted)
+                var relocked = TryRelock(remoteLockState);
+                if(relocked && !remoteLocksQueue.IsAddingCompleted)
                 {
                     remoteLockState.NextKeepAliveMoment = DateTime.UtcNow.Add(keepLockAliveInterval);
                     remoteLocksQueue.Add(remoteLockState);
@@ -247,7 +253,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             }
         }
 
-        private void Relock(RemoteLockState remoteLockState)
+        private bool TryRelock(RemoteLockState remoteLockState)
         {
             var attempt = 1;
             while(true)
@@ -255,8 +261,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 try
                 {
                     using(metrics.CassandraImplRelockOp.NewContext(remoteLockState.ToString()))
-                        remoteLockImplementation.Relock(remoteLockState.LockId, remoteLockState.ThreadId);
-                    break;
+                    {
+                        var relocked = remoteLockImplementation.TryRelock(remoteLockState.LockId, remoteLockState.ThreadId);
+                        if(!relocked)
+                            logger.Error(string.Format("Cannot relock. Possible lock metadata corruption for: {0}", remoteLockState));
+                        return relocked;
+                    }
                 }
                 catch(Exception e)
                 {

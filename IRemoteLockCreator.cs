@@ -1,8 +1,12 @@
-﻿namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+﻿using JetBrains.Annotations;
+
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public interface IRemoteLockCreator
     {
-        IRemoteLock Lock(string lockId);
-        bool TryGetLock(string lockId, out IRemoteLock remoteLock);
+        [NotNull]
+        IRemoteLock Lock([NotNull] string lockId);
+
+        bool TryGetLock([NotNull] string lockId, out IRemoteLock remoteLock);
     }
 }

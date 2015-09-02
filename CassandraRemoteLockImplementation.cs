@@ -26,9 +26,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [NotNull]
         public LockAttemptResult TryLock([NotNull] string lockId, [NotNull] string threadId)
         {
-            long oldLockMetadataTimestamp;
-            var lockMetadata = GetOrCreateLockMetadata(lockId, threadId, out oldLockMetadataTimestamp);
-            var newThreshold = NewThreshold(lockMetadata.GetPreviousThreshold());
+            var lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
+            var newThreshold = NewThreshold(lockMetadata.PreviousThreshold ?? (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks);
 
             LockAttemptResult result;
             var probableOwnerThreadId = lockMetadata.ProbableOwnerThreadId;
@@ -42,31 +41,18 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                 if(lockMetadata.LockCount <= changeLockRowThreshold)
                 {
                     var newLockMetadata = new NewLockMetadata(lockId, lockMetadata.LockRowId, lockMetadata.LockCount + 1, newThreshold, threadId);
-                    baseOperationsPerformer.WriteLockMetadata(newLockMetadata, oldLockMetadataTimestamp);
+                    baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
                 }
                 else
                 {
                     var newLockMetadata = new NewLockMetadata(lockId, Guid.NewGuid().ToString(), 1, newThreshold, threadId);
                     baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, singleOperationTimeout.Multiply(3));
                     baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newThreshold, threadId, singleOperationTimeout.Multiply(2) + lockTtl);
-                    baseOperationsPerformer.WriteLockMetadata(newLockMetadata, oldLockMetadataTimestamp);
+                    baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
                     baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, TimeSpan.FromMinutes(20));
                 }
             }
             return result;
-        }
-
-        [NotNull]
-        private LockMetadata GetOrCreateLockMetadata([NotNull] string lockId, [NotNull] string threadId, out long oldLockMetadataTimestamp)
-        {
-            var lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId);
-            if(lockMetadata != null)
-            {
-                oldLockMetadataTimestamp = lockMetadata.Timestamp;
-                return lockMetadata;
-            }
-            oldLockMetadataTimestamp = 0;
-            return new LockMetadata(lockId, lockId, 0, (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks, null, oldLockMetadataTimestamp);
         }
 
         [NotNull]
@@ -81,7 +67,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     throw new Exception("Lock unknown exception");
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
-
             var beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();

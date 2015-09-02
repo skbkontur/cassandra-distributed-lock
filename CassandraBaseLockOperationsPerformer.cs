@@ -113,20 +113,16 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             MakeInConnection(connection => columns = connection.GetColumns(rowKey, allMetadataColumnNames));
             if(!columns.Any())
                 return null;
-            var lockRowId = columns.Any(column => column.Name == lockRowIdColumnName) ?
-                                serializer.Deserialize<string>(columns.Single(x => x.Name == lockRowIdColumnName).Value) :
-                                lockId;
-            var lockCount = columns.Any(column => column.Name == lockCountColumnName) ?
-                                serializer.Deserialize<int>(columns.Single(x => x.Name == lockCountColumnName).Value) :
-                                0;
-            var previousThreshold = columns.Any(x => x.Name == previousThresholdColumnName) ?
-                                        serializer.Deserialize<long?>(columns.Single(x => x.Name == previousThresholdColumnName).Value) :
-                                        null;
-            var ownerThreadId = columns.Any(x => x.Name == probableOwnerThreadIdColumnName) ?
-                                    serializer.Deserialize<string>(columns.Single(x => x.Name == probableOwnerThreadIdColumnName).Value) :
-                                    null;
+            var lockRowIdColumn = columns.SingleOrDefault(x => x.Name == lockRowIdColumnName);
+            var lockRowId = lockRowIdColumn == null ? lockId : serializer.Deserialize<string>(lockRowIdColumn.Value);
+            var lockCountColumn = columns.SingleOrDefault(x => x.Name == lockCountColumnName);
+            var lockCount = lockCountColumn == null ? 0 : serializer.Deserialize<int>(lockCountColumn.Value);
+            var previousThresholdColumn = columns.SingleOrDefault(x => x.Name == previousThresholdColumnName);
+            var previousThreshold = previousThresholdColumn == null ? (long?)null : serializer.Deserialize<long>(previousThresholdColumn.Value);
+            var probableOwnerThreadIdColumn = columns.SingleOrDefault(x => x.Name == probableOwnerThreadIdColumnName);
+            var probableOwnerThreadId = probableOwnerThreadIdColumn == null ? null : serializer.Deserialize<string>(probableOwnerThreadIdColumn.Value);
             var timestamp = columns.Max(column => column.Timestamp.Value);
-            return new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, ownerThreadId, timestamp);
+            return new LockMetadata(lockId, lockRowId, lockCount, previousThreshold, probableOwnerThreadId, timestamp);
         }
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)

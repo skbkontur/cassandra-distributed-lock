@@ -53,14 +53,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [CanBeNull]
         public string ProbableOwnerThreadId { get; private set; }
 
-        [NotNull]
-        public string GetProbableOwnerThreadId()
-        {
-            if(string.IsNullOrEmpty(ProbableOwnerThreadId))
-                throw new InvalidOperationException(string.Format("ProbableOwnerThreadId is not set for: {0}", this));
-            return ProbableOwnerThreadId;
-        }
-
         public long Timestamp { get; private set; }
 
         public override string ToString()

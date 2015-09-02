@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="CassandraBaseLockOperationsPerformer.cs" />
     <Compile Include="LockRowNamesExtensions.cs" />
+    <Compile Include="NewLockMetadata.cs" />
     <Compile Include="RemoteLock.cs" />
     <Compile Include="RemoteLockCreator.cs" />
     <Compile Include="RemoteLocker\BoundedBlockingQueue.cs" />

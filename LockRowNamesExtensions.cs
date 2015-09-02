@@ -7,6 +7,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return "Main_" + lockMetadata.LockRowId;
         }
 
+        public static string MainRowKey(this NewLockMetadata lockMetadata)
+        {
+            return "Main_" + lockMetadata.LockRowId;
+        }
+
         public static string ShadowRowKey(this LockMetadata lockMetadata)
         {
             return "Shade_" + lockMetadata.LockRowId;

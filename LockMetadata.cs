@@ -6,18 +6,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class LockMetadata
     {
-        public LockMetadata(
-            [NotNull] string lockId,
-            [NotNull] string lockRowId,
-            int lockCount,
-            long? previousThreshold,
-            [CanBeNull] string probableOwnerThreadId)
+        public LockMetadata([NotNull] string lockId, [NotNull] string lockRowId, int lockCount, long? previousThreshold, [CanBeNull] string probableOwnerThreadId, long timestamp)
         {
             LockId = lockId;
             LockRowId = lockRowId;
             LockCount = lockCount;
             PreviousThreshold = previousThreshold;
             ProbableOwnerThreadId = probableOwnerThreadId;
+            Timestamp = timestamp;
         }
 
         [NotNull]
@@ -43,7 +39,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public long GetPreviousThreshold()
         {
-            if (!PreviousThreshold.HasValue)
+            if(!PreviousThreshold.HasValue)
                 throw new InvalidOperationException(string.Format("PreviousThreshold is not set for: {0}", this));
             return PreviousThreshold.Value;
         }
@@ -60,14 +56,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [NotNull]
         public string GetProbableOwnerThreadId()
         {
-            if (string.IsNullOrEmpty(ProbableOwnerThreadId))
+            if(string.IsNullOrEmpty(ProbableOwnerThreadId))
                 throw new InvalidOperationException(string.Format("ProbableOwnerThreadId is not set for: {0}", this));
             return ProbableOwnerThreadId;
         }
 
+        public long Timestamp { get; private set; }
+
         public override string ToString()
         {
-            return string.Format("LockId: {0}, LockRowId: {1}, LockCount: {2}, PreviousThreshold: {3}, ProbableOwnerThreadId: {4}", LockId, LockRowId, LockCount, PreviousThreshold, ProbableOwnerThreadId);
+            return string.Format("LockId: {0}, LockRowId: {1}, LockCount: {2}, PreviousThreshold: {3}, ProbableOwnerThreadId: {4}, timestamp: {5}",
+                                 LockId, LockRowId, LockCount, PreviousThreshold, ProbableOwnerThreadId, Timestamp);
         }
     }
 }

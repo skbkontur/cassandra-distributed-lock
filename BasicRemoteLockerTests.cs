@@ -21,11 +21,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void TryLock_SingleLockId(bool useSingleLockKeeperThread)
+        [Test]
+        public void TryLock_SingleLockId()
         {
-            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread))
+            using(var tester = new RemoteLockerTester())
             {
                 var lockId = Guid.NewGuid().ToString();
                 IRemoteLock lock1, lock2;
@@ -40,11 +39,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void TryLock_DifferentLockIds(bool useSingleLockKeeperThread)
+        [Test]
+        public void TryLock_DifferentLockIds()
         {
-            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread))
+            using(var tester = new RemoteLockerTester())
             {
                 var lockId1 = Guid.NewGuid().ToString();
                 var lockId2 = Guid.NewGuid().ToString();
@@ -59,11 +57,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void Lock(bool useSingleLockKeeperThread)
+        [Test]
+        public void Lock()
         {
-            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread))
+            using(var tester = new RemoteLockerTester())
             {
                 var lockId = Guid.NewGuid().ToString();
                 var lock1 = tester.Lock(lockId);
@@ -75,9 +72,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void LockIsKeptAlive_Success(bool useSingleLockKeeperThread)
+        [Test]
+        public void LockIsKeptAlive_Success()
         {
             var config = new RemoteLockerTesterConfig
                 {
@@ -87,7 +83,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(5),
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
-            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
+            using(var tester = new RemoteLockerTester(config))
             {
                 var lockId = Guid.NewGuid().ToString();
                 var lock1 = tester[0].Lock(lockId);
@@ -100,9 +96,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void LockIsKeptAlive_Failure(bool useSingleLockKeeperThread)
+        [Test]
+        public void LockIsKeptAlive_Failure()
         {
             var config = new RemoteLockerTesterConfig
                 {
@@ -112,7 +107,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(10),
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
-            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
+            using(var tester = new RemoteLockerTester(config))
             {
                 var lockId = Guid.NewGuid().ToString();
                 var lock1 = tester[0].Lock(lockId);

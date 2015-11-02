@@ -24,19 +24,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 
-        [TestCase(true, 1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
-        [TestCase(true, 2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(true, 2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(true, 5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(true, 5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(true, 10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
-        [TestCase(false, 1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
-        [TestCase(false, 2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(false, 2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(false, 5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(false, 5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(false, 10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
-        public void Lock(bool useSingleLockKeeperThread, int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization)
+        [TestCase(1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
+        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
+        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
+        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
+        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
+        [TestCase(10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
+        public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization)
         {
             var lockTtl = TimeSpan.FromSeconds(3);
             const int cassOpAttempts = 1;
@@ -52,7 +46,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var previousThresholds = Enumerable.Range(0, locks).Select(i => (long?)0L).ToArray();
             var resources = new ConcurrentDictionary<string, Guid>();
-            using(var tester = new RemoteLockerTester(useSingleLockKeeperThread, config))
+            using(var tester = new RemoteLockerTester(config))
             {
                 var localTester = tester;
                 var actions = new Action<MultithreadingTestHelper.RunState>[threads];
@@ -78,7 +72,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                     opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
                                 Thread.Sleep(opDuration);
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
-                                CollectionAssert.AreEqual(new[] { @lock.ThreadId }, localTester.GetThreadsInMainRow(lockId));
+                                CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                 var lockMetadata = localTester.GetLockMetadata(lockId);
                                 Assert.That(lockMetadata.PreviousThreshold, Is.GreaterThan(previousThresholds[lockIndex]));

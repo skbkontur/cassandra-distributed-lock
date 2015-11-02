@@ -18,34 +18,30 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             remoteLockImplementation = (CassandraRemoteLockImplementation)container.Get<IRemoteLockImplementation>();
         }
 
-        [TestCase(true, LocalRivalOptimization.Disabled)]
-        [TestCase(true, LocalRivalOptimization.Enabled)]
-        [TestCase(false, LocalRivalOptimization.Disabled)]
-        [TestCase(false, LocalRivalOptimization.Enabled)]
-        public void StressTest(bool useSingleLockKeeperThread, LocalRivalOptimization localRivalOptimization)
+        [TestCase(LocalRivalOptimization.Disabled)]
+        [TestCase(LocalRivalOptimization.Enabled)]
+        public void StressTest(LocalRivalOptimization localRivalOptimization)
         {
-            DoTestIncrementDecrementLock(useSingleLockKeeperThread, 30, TimeSpan.FromSeconds(60), localRivalOptimization);
+            DoTestIncrementDecrementLock(30, TimeSpan.FromSeconds(60), localRivalOptimization);
         }
 
-        [TestCase(true, LocalRivalOptimization.Disabled)]
-        [TestCase(true, LocalRivalOptimization.Enabled)]
-        [TestCase(false, LocalRivalOptimization.Disabled)]
-        [TestCase(false, LocalRivalOptimization.Enabled)]
-        public void TestIncrementDecrementLock(bool useSingleLockKeeperThread, LocalRivalOptimization localRivalOptimization)
+        [TestCase(LocalRivalOptimization.Disabled)]
+        [TestCase(LocalRivalOptimization.Enabled)]
+        public void TestIncrementDecrementLock(LocalRivalOptimization localRivalOptimization)
         {
-            DoTestIncrementDecrementLock(useSingleLockKeeperThread, 10, TimeSpan.FromSeconds(10), localRivalOptimization);
+            DoTestIncrementDecrementLock(10, TimeSpan.FromSeconds(10), localRivalOptimization);
         }
 
-        private void DoTestIncrementDecrementLock(bool useSingleLockKeeperThread, int threadCount, TimeSpan runningTimeInterval, LocalRivalOptimization localRivalOptimization)
+        private void DoTestIncrementDecrementLock(int threadCount, TimeSpan runningTimeInterval, LocalRivalOptimization localRivalOptimization)
         {
-            var remoteLockCreators = PrepareRemoteLockCreators(useSingleLockKeeperThread, threadCount, localRivalOptimization, remoteLockImplementation);
+            var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation);
 
             for(var i = 0; i < threadCount; i++)
                 AddThread(IncrementDecrementAction, remoteLockCreators[i]);
             RunThreads(runningTimeInterval);
             JoinThreads();
 
-            DisposeRemoteLockCreators(useSingleLockKeeperThread, remoteLockCreators);
+            DisposeRemoteLockCreators(remoteLockCreators);
         }
 
         private void IncrementDecrementAction(IRemoteLockCreator lockCreator, Random random)

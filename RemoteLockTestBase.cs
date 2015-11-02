@@ -123,52 +123,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
-        protected static IRemoteLockCreator[] PrepareRemoteLockCreators(bool useSingleLockKeeperThread, int threadCount, LocalRivalOptimization localRivalOptimization, CassandraRemoteLockImplementation remoteLockImplementation)
+        protected static IRemoteLockCreator[] PrepareRemoteLockCreators(int threadCount, LocalRivalOptimization localRivalOptimization, CassandraRemoteLockImplementation remoteLockImplementation)
         {
             var remoteLockCreators = new IRemoteLockCreator[threadCount];
-            if(useSingleLockKeeperThread)
+            var remoteLockerMetrics = new RemoteLockerMetrics(null);
+            if(localRivalOptimization == LocalRivalOptimization.Enabled)
             {
-                var remoteLockerMetrics = new RemoteLockerMetrics(null);
-                if(localRivalOptimization == LocalRivalOptimization.Enabled)
-                {
-                    var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
-                    for(var i = 0; i < threadCount; i++)
-                        remoteLockCreators[i] = singleRemoteLocker;
-                }
-                else
-                {
-                    for(var i = 0; i < threadCount; i++)
-                        remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
-                }
+                var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
+                for(var i = 0; i < threadCount; i++)
+                    remoteLockCreators[i] = singleRemoteLocker;
             }
             else
             {
-                var remoteLockCreator = new RemoteLockCreator(remoteLockImplementation);
                 for(var i = 0; i < threadCount; i++)
-                    remoteLockCreators[i] = localRivalOptimization == LocalRivalOptimization.Enabled ? (IRemoteLockCreator)remoteLockCreator : new RemoteLockCreatorWthoutLocalRivalOptimization(remoteLockCreator);
+                    remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
             }
             return remoteLockCreators;
         }
 
-        protected static void DisposeRemoteLockCreators(bool useSingleLockKeeperThread, IRemoteLockCreator[] remoteLockCreators)
+        protected static void DisposeRemoteLockCreators(IRemoteLockCreator[] remoteLockCreators)
         {
-            if(useSingleLockKeeperThread)
-            {
-                foreach(var remoteLockCreator in remoteLockCreators)
-                    ((RemoteLocker)remoteLockCreator).Dispose();
-            }
+            foreach(var remoteLockCreator in remoteLockCreators)
+                ((RemoteLocker)remoteLockCreator).Dispose();
         }
 
-        protected static void CheckLockIsNotAcquiredLocally(bool useSingleLockKeeperThread, IRemoteLockCreator[] remoteLockCreators, string lockId)
+        protected static void CheckLockIsNotAcquiredLocally(IRemoteLockCreator[] remoteLockCreators, string lockId)
         {
             //проверяем, что после всего мы в какой-то момент сможем-таки взять лок
-            if(useSingleLockKeeperThread)
-            {
-                foreach(var remoteLockCreator in remoteLockCreators)
-                    Assert.That(!((RemoteLocker)remoteLockCreator).CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
-            }
-            else
-                Assert.That(!WeakRemoteLock.CheckLocalLockUsed(lockId), "После остановки всех потоков осталась локальная блокировка");
+            foreach(var remoteLockCreator in remoteLockCreators)
+                Assert.That(!((RemoteLocker)remoteLockCreator).CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
         }
 
         protected Container container;

@@ -51,6 +51,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             return CassandraCluster.RetrieveColumnFamilyConnection(keySpaceName, columnFamilyName);
         }
 
+        public IColumnFamilyConnectionImplementation RetrieveColumnFamilyConnectionImplementation(string keySpaceName, string columnFamilyName)
+        {
+            throw new NotImplementedException();
+        }
+
         public Dictionary<ConnectionPoolKey, KeyspaceConnectionPoolKnowledge> GetKnowledges()
         {
             return CassandraCluster.GetKnowledges();

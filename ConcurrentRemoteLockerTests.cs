@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 using NUnit.Framework;
 
@@ -24,14 +25,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 
-        [TestCase(1, 1, 500, 0.01, LocalRivalOptimization.Disabled)]
-        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Enabled)]
-        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Disabled)]
-        [TestCase(10, 5, 500, 0.09, LocalRivalOptimization.Disabled)]
-        public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization)
+        [TestCase(1, 1, 500, 0.01, LocalRivalOptimization.Disabled, false)]
+        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Enabled, false)]
+        [TestCase(2, 10, 100, 0.05, LocalRivalOptimization.Disabled, false)]
+        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Enabled, false)]
+        [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Disabled, false)]
+        [TestCase(10, 5, 500, 0.09, LocalRivalOptimization.Disabled, false)]
+        [TestCase(1, 10, 1000, 0.005, LocalRivalOptimization.Disabled, true)]
+        [TestCase(1, 10, 1000, 0.005, LocalRivalOptimization.Disabled, false)]
+        public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization, bool enableSyncer)
         {
+            const double fastRunningOpProbability = 0.20;
             var lockTtl = TimeSpan.FromSeconds(3);
             const int cassOpAttempts = 1;
             var cassOpTimeout = TimeSpan.FromSeconds(1);
@@ -45,15 +49,31 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var previousThresholds = Enumerable.Range(0, locks).Select(i => (long?)0L).ToArray();
+            var opsCounter = 0;
             var resources = new ConcurrentDictionary<string, Guid>();
             using(var tester = new RemoteLockerTester(config))
             {
+                var stopSignal = new ManualResetEvent(false);
+                var syncSignal = new ManualResetEvent(true);
+                Task syncerThread = null;
+                if(enableSyncer)
+                {
+                    syncerThread = Task.Factory.StartNew(() =>
+                        {
+                            do
+                            {
+                                syncSignal.Reset();
+                                Thread.Sleep(TimeSpan.FromMilliseconds(300));
+                                syncSignal.Set();
+                            } while(!stopSignal.WaitOne(TimeSpan.FromSeconds(3)));
+                        });
+                }
                 var localTester = tester;
                 var actions = new Action<MultithreadingTestHelper.RunState>[threads];
                 for(var th = 0; th < actions.Length; th++)
                 {
                     var remoteLockCreator = tester[th];
-                    actions[th] = (state) =>
+                    actions[th] = state =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
                             for(var op = 0; op < operationsPerThread; op++)
@@ -62,13 +82,18 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                     break;
                                 var lockIndex = rng.Next(lockIds.Length);
                                 var lockId = lockIds[lockIndex];
+                                syncSignal.WaitOne();
                                 var @lock = Lock(remoteLockCreator, rng, lockId, state);
                                 if(@lock == null)
                                     break;
+                                if(++opsCounter % (threads * operationsPerThread / 100) == 0)
+                                    Console.Out.Write(".");
                                 var resource = Guid.NewGuid();
                                 resources[lockId] = resource;
                                 var opDuration = TimeSpan.FromMilliseconds(16);
-                                if(rng.NextDouble() < longRunningOpProbability)
+                                if(rng.NextDouble() < fastRunningOpProbability)
+                                    opDuration = TimeSpan.Zero;
+                                else if(rng.NextDouble() < longRunningOpProbability)
                                     opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
                                 Thread.Sleep(opDuration);
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
@@ -84,6 +109,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                         };
                 }
                 MultithreadingTestHelper.RunOnSeparateThreads(TimeSpan.FromMinutes(30), actions);
+                stopSignal.Set();
+                if(syncerThread != null)
+                    syncerThread.Wait();
+                Assert.That(opsCounter, Is.EqualTo(threads * operationsPerThread));
             }
         }
 

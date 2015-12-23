@@ -49,7 +49,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, cassOpAttempts, cassOpTimeout),
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
-            var previousThresholds = Enumerable.Range(0, locks).Select(i => (long?)0L).ToArray();
+            var previousThresholds = new ConcurrentDictionary<string, long>();
             var resources = new ConcurrentDictionary<string, Guid>();
             var opsCounters = new ConcurrentDictionary<string, int>();
             using(var tester = new RemoteLockerTester(config))
@@ -99,8 +99,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                 var lockMetadata = localTester.GetLockMetadata(lockId);
-                                Assert.That(lockMetadata.PreviousThreshold, Is.GreaterThan(previousThresholds[lockIndex]));
-                                previousThresholds[lockIndex] = lockMetadata.PreviousThreshold;
+                                Assert.That(lockMetadata.PreviousThreshold, Is.GreaterThan(previousThresholds.GetOrAdd(lockId, 0)));
+                                previousThresholds[lockId] = lockMetadata.GetPreviousThreshold();
                                 Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
                                 if(++localOpsCounter % (threads * operationsPerThread / 100) == 0)

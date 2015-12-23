@@ -105,6 +105,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var newThreshold = NewThreshold(lockMetadata.GetPreviousThreshold());
             var newLockMetadata = new NewLockMetadata(lockMetadata.LockId, lockMetadata.LockRowId, lockMetadata.LockCount, newThreshold, threadId);
             baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
+            baseOperationsPerformer.DeleteThread(lockMetadata.MainRowKey(), lockMetadata.GetPreviousThreshold(), threadId);
             baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
             return true;
         }

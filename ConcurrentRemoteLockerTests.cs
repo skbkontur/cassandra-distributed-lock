@@ -37,7 +37,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization, bool enableSyncer)
         {
             const double fastRunningOpProbability = 0.20;
-            var lockTtl = TimeSpan.FromMinutes(10);
+            var lockTtl = TimeSpan.FromMinutes(30);
             const int cassOpAttempts = 1;
             var cassOpTimeout = TimeSpan.FromSeconds(1);
             var config = new RemoteLockerTesterConfig
@@ -45,7 +45,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     LockCreatorsCount = threads,
                     LocalRivalOptimization = localRivalOptimization,
                     LockTtl = lockTtl,
-                    KeepLockAliveInterval = TimeSpan.FromMinutes(5),
+                    KeepLockAliveInterval = TimeSpan.FromMinutes(30),
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, cassOpAttempts, cassOpTimeout),
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();

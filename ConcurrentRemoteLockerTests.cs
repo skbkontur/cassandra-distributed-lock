@@ -50,8 +50,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var previousThresholds = Enumerable.Range(0, locks).Select(i => (long?)0L).ToArray();
-            var opsCounter = 0;
             var resources = new ConcurrentDictionary<string, Guid>();
+            var opsCounters = new ConcurrentDictionary<string, int>();
             using(var tester = new RemoteLockerTester(config))
             {
                 var stopSignal = new ManualResetEvent(false);
@@ -87,7 +87,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 var @lock = Lock(remoteLockCreator, rng, lockId, state);
                                 if(@lock == null)
                                     break;
-                                var localOpsCounter = opsCounter;
+                                var localOpsCounter = opsCounters.GetOrAdd(lockId, 0);
                                 var resource = Guid.NewGuid();
                                 resources[lockId] = resource;
                                 var opDuration = TimeSpan.FromMilliseconds(16);
@@ -103,9 +103,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 previousThresholds[lockIndex] = lockMetadata.PreviousThreshold;
                                 Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
-                                opsCounter = localOpsCounter + 1;
-                                if(opsCounter % (threads * operationsPerThread / 100) == 0)
+                                if(++localOpsCounter % (threads * operationsPerThread / 100) == 0)
                                     Console.Out.Write(".");
+                                opsCounters[lockId] = localOpsCounter;
                                 @lock.Dispose();
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                             }
@@ -115,7 +115,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 stopSignal.Set();
                 if(syncerThread != null)
                     syncerThread.Wait();
-                Assert.That(opsCounter, Is.EqualTo(threads * operationsPerThread));
+                Assert.That(opsCounters.Sum(x => x.Value), Is.EqualTo(threads * operationsPerThread));
             }
         }
 

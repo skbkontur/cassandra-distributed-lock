@@ -38,6 +38,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
             if(result.Status == LockAttemptStatus.Success)
             {
+                lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
+
                 if(lockMetadata.LockCount <= changeLockRowThreshold)
                 {
                     var newLockMetadata = new NewLockMetadata(lockId, lockMetadata.LockRowId, lockMetadata.LockCount + 1, newThreshold, threadId);

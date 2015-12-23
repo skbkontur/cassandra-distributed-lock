@@ -31,6 +31,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Enabled, false)]
         [TestCase(5, 25, 100, 0.05, LocalRivalOptimization.Disabled, false)]
         [TestCase(10, 5, 500, 0.09, LocalRivalOptimization.Disabled, false)]
+        [TestCase(1, 10, 100, 0.20, LocalRivalOptimization.Disabled, false)]
         [TestCase(1, 10, 1000, 0.005, LocalRivalOptimization.Disabled, true)]
         [TestCase(1, 10, 1000, 0.005, LocalRivalOptimization.Disabled, false)]
         public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization, bool enableSyncer)
@@ -86,8 +87,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 var @lock = Lock(remoteLockCreator, rng, lockId, state);
                                 if(@lock == null)
                                     break;
-                                if(++opsCounter % (threads * operationsPerThread / 100) == 0)
-                                    Console.Out.Write(".");
+                                var localOpsCounter = opsCounter;
                                 var resource = Guid.NewGuid();
                                 resources[lockId] = resource;
                                 var opDuration = TimeSpan.FromMilliseconds(16);
@@ -96,13 +96,16 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 else if(rng.NextDouble() < longRunningOpProbability)
                                     opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
                                 Thread.Sleep(opDuration);
-                                Assert.That(resources[lockId], Is.EqualTo(resource));
                                 CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                 var lockMetadata = localTester.GetLockMetadata(lockId);
                                 Assert.That(lockMetadata.PreviousThreshold, Is.GreaterThan(previousThresholds[lockIndex]));
                                 previousThresholds[lockIndex] = lockMetadata.PreviousThreshold;
                                 Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
+                                Assert.That(resources[lockId], Is.EqualTo(resource));
+                                opsCounter = localOpsCounter + 1;
+                                if(opsCounter % (threads * operationsPerThread / 100) == 0)
+                                    Console.Out.Write(".");
                                 @lock.Dispose();
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                             }

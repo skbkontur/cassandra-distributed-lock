@@ -94,7 +94,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 if(rng.NextDouble() < fastRunningOpProbability)
                                     opDuration = TimeSpan.Zero;
                                 else if(rng.NextDouble() < longRunningOpProbability)
-                                    opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
+                                    opDuration = opDuration.Add(TimeSpan.FromSeconds(3)).Add(cassOpTimeout.Multiply(cassOpAttempts));
                                 Thread.Sleep(opDuration);
                                 CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));

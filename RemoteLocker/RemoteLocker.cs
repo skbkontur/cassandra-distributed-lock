@@ -73,7 +73,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             if(isDisposed)
                 return;
             remoteLocksQueue.CompleteAdding();
-            remoteLocksKeeperThread.Join(TimeSpan.FromMinutes(1));
+            remoteLocksKeeperThread.Join();
             remoteLocksQueue.Dispose();
             isDisposed = true;
         }

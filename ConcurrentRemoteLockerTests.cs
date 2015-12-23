@@ -37,7 +37,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public void Lock(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization, bool enableSyncer)
         {
             const double fastRunningOpProbability = 0.20;
-            var lockTtl = TimeSpan.FromSeconds(3);
+            var lockTtl = TimeSpan.FromMinutes(10);
             const int cassOpAttempts = 1;
             var cassOpTimeout = TimeSpan.FromSeconds(1);
             var config = new RemoteLockerTesterConfig
@@ -45,7 +45,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     LockCreatorsCount = threads,
                     LocalRivalOptimization = localRivalOptimization,
                     LockTtl = lockTtl,
-                    KeepLockAliveInterval = TimeSpan.FromSeconds(1),
+                    KeepLockAliveInterval = TimeSpan.FromMinutes(5),
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, cassOpAttempts, cassOpTimeout),
                 };
             var lockIds = Enumerable.Range(0, locks).Select(x => Guid.NewGuid().ToString()).ToArray();
@@ -105,6 +105,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
                                 if(++localOpsCounter % (threads * operationsPerThread / 100) == 0)
                                     Console.Out.Write(".");
+                                Assert.That(localOpsCounter, Is.EqualTo(opsCounters[lockId] + 1));
                                 opsCounters[lockId] = localOpsCounter;
                                 @lock.Dispose();
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));

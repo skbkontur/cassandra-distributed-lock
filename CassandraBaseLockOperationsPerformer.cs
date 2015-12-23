@@ -131,24 +131,16 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             action(connection);
         }
 
-        private readonly object lockObject = new object();
-
         private long GetNowTicks()
         {
-            lock(lockObject)
-            {
-                var result = Math.Max(DateTime.UtcNow.Ticks, lastTicks + 1);
-                lastTicks = result;
-                return result;
-            }
-            /*var ticks = DateTime.UtcNow.Ticks;
+            var ticks = DateTime.UtcNow.Ticks;
             while(true)
             {
                 var last = Interlocked.Read(ref lastTicks);
                 var cur = Math.Max(ticks, last + 1);
                 if(Interlocked.CompareExchange(ref lastTicks, cur, last) == last)
                     return cur;
-            }*/
+            }
         }
 
         [NotNull]

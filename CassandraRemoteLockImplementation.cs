@@ -11,13 +11,18 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class CassandraRemoteLockImplementation : IRemoteLockImplementation
     {
-        public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
+        public CassandraRemoteLockImplementation(
+            ICassandraCluster cassandraCluster, 
+            ISerializer serializer, 
+            CassandraRemoteLockImplementationSettings settings,
+            ITimestampProvider timestampProvider = null)
         {
             var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(settings.ColumnFamilyFullName.KeyspaceName, settings.ColumnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
             singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = settings.LockTtl;
             keepLockAliveInterval = settings.KeepLockAliveInterval;
-            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings.ColumnFamilyFullName);
+            this.timestampProvider = timestampProvider ?? new DefaultTimestampProvider();
+            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, this.timestampProvider, settings.ColumnFamilyFullName);
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
         }
 
@@ -133,9 +138,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return lockMetadata;
         }
 
-        private static long NewThreshold(long previousThreshold)
+        private long NewThreshold(long previousThreshold)
         {
-            return Math.Max(DateTime.UtcNow.Ticks, previousThreshold + 1);
+            return Math.Max(timestampProvider.GetNowTicks(), previousThreshold + 1);
         }
 
         private readonly TimeSpan singleOperationTimeout;
@@ -143,5 +148,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;
         private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;
+        private readonly ITimestampProvider timestampProvider;
     }
 }

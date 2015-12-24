@@ -16,10 +16,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal class CassandraBaseLockOperationsPerformer
     {
-        public CassandraBaseLockOperationsPerformer(ICassandraCluster cassandraCluster, ISerializer serializer, ColumnFamilyFullName columnFamilyFullName)
+        public CassandraBaseLockOperationsPerformer(
+            ICassandraCluster cassandraCluster, 
+            ISerializer serializer, 
+            ITimestampProvider timestampProvider,
+            ColumnFamilyFullName columnFamilyFullName)
         {
             this.cassandraCluster = cassandraCluster;
             this.serializer = serializer;
+            this.timestampProvider = timestampProvider;
             this.columnFamilyFullName = columnFamilyFullName;
         }
 
@@ -133,7 +138,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private long GetNowTicks()
         {
-            var ticks = DateTime.UtcNow.Ticks;
+            var ticks = timestampProvider.GetNowTicks();
             while(true)
             {
                 var last = Interlocked.Read(ref lastTicks);
@@ -174,6 +179,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private static readonly string[] allMetadataColumnNames = {lockCountColumnName, lockRowIdColumnName, previousThresholdColumnName, probableOwnerThreadIdColumnName};
         private readonly ICassandraCluster cassandraCluster;
         private readonly ISerializer serializer;
+        private readonly ITimestampProvider timestampProvider;
         private readonly ColumnFamilyFullName columnFamilyFullName;
         private long lastTicks;
     }

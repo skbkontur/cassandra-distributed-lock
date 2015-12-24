@@ -41,7 +41,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestCase(1, 10, 100, 0.09d, 0.2d, false)]
         [TestCase(1, 25, 100, 0.09d, 0.2d, false)]
         [TestCase(1, 10, 1000, 0.005d, 0.2d, false)]
-        [TestCase(1, 10, 1000, 0.005d, 0.2d, false)]
         [TestCase(1, 25, 100, 0.00d, 1.00d, true)]
         [TestCase(1, 25, 1000, 0.00d, 1.00d, true)]
         [TestCase(1, 50, 50, 0.00d, 1.00d, true)]

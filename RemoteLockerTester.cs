@@ -23,7 +23,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
             var cassandraCluster = new CassandraCluster(config.CassandraClusterSettings ?? CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
             var cassandraRemoteLockImplementationSettings = new CassandraRemoteLockImplementationSettings(
-                ColumnFamilies.remoteLock, config.LockTtl ?? TimeSpan.FromSeconds(10), config.KeepLockAliveInterval ?? TimeSpan.FromSeconds(2), 10);
+                ColumnFamilies.remoteLock, config.LockTtl ?? TimeSpan.FromSeconds(10), config.KeepLockAliveInterval ?? TimeSpan.FromSeconds(2), 2);
 
             cassandraRemoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, cassandraRemoteLockImplementationSettings);
             var lockCreatorsCount = config.LockCreatorsCount ?? 1;
@@ -38,7 +38,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             else
             {
                 for(var i = 0; i < lockCreatorsCount; i++)
-                    remoteLockers[i] = new RemoteLocker(cassandraRemoteLockImplementation, remoteLockerMetrics);
+                    remoteLockers[i] = new RemoteLocker(new CassandraRemoteLockImplementation(cassandraCluster, serializer, cassandraRemoteLockImplementationSettings, new StochasticTimestampProvider(config.StochasticType)), remoteLockerMetrics);
             }
         }
 
@@ -86,5 +86,28 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private readonly RemoteLocker[] remoteLockers;
         private readonly RemoteLockerMetrics remoteLockerMetrics;
         private readonly CassandraRemoteLockImplementation cassandraRemoteLockImplementation;
+
+        private class StochasticTimestampProvider : ITimestampProvider
+        {
+            private readonly TimestampProviderStochasticType stochasticType;
+
+            public StochasticTimestampProvider(TimestampProviderStochasticType stochasticType)
+            {
+                this.stochasticType = stochasticType;
+            }
+
+            public long GetNowTicks()
+            {
+                var diff = TimeSpan.FromSeconds(Rng.Next(50, 100)).Ticks;
+                if(stochasticType == TimestampProviderStochasticType.BothPositiveAndNegative)
+                    diff *= Rng.Next(-1, 2);
+                return DateTime.UtcNow.Ticks + diff;
+            }
+
+            [ThreadStatic]
+            private static Random random;
+
+            private static Random Rng { get { return random ?? (random = new Random(Guid.NewGuid().GetHashCode())); } }
+        }
     }
 }

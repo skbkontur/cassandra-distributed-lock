@@ -11,5 +11,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public TimeSpan? LockTtl { get; set; }
         public TimeSpan? KeepLockAliveInterval { get; set; }
         public ICassandraClusterSettings CassandraClusterSettings { get; set; }
+        public TimestampProviderStochasticType StochasticType { get; set; }
+    }
+
+    public enum TimestampProviderStochasticType
+    {
+        OnlyPositive,
+        BothPositiveAndNegative
     }
 }

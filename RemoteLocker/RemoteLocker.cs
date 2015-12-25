@@ -161,7 +161,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     rivalThreadId = lockAttempt.OwnerId;
                     return null;
                 case LockAttemptStatus.ConcurrentAttempt:
-                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 10)));
+                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
                     logger.WarnFormat("remoteLockImplementation.TryLock() returned LockAttemptStatus.ConcurrentAttempt for lockId: {0}, threadId: {1}. Will sleep for {2} ms", lockId, threadId, shortSleep);
                     Thread.Sleep(shortSleep);
                     break;
@@ -270,7 +270,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 }
                 catch(Exception e)
                 {
-                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 10)));
+                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
                     logger.Warn(string.Format("remoteLockImplementation.Relock() failed for: {0}. Will sleep for {1} ms", remoteLockState, shortSleep), e);
                     Thread.Sleep(shortSleep);
                 }

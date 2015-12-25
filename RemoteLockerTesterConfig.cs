@@ -19,7 +19,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             return new RemoteLockerTesterConfig
                 {
                     LockersCount = 1,
-                    LocalRivalOptimization = RemoteLockTests.LocalRivalOptimization.Enabled,
+                    LocalRivalOptimization = LocalRivalOptimization.Enabled,
                     LockTtl = TimeSpan.FromSeconds(10),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(2),
                     ChangeLockRowThreshold = 10,

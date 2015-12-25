@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 using GroBuf;
 using GroBuf.DataMembersExtracters;
@@ -42,8 +43,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         public void Dispose()
         {
-            foreach(var remoteLockLocalManager in remoteLockers)
-                remoteLockLocalManager.Dispose();
+            var disposeTasks = new Task[remoteLockers.Length];
+            for(var i = 0; i < remoteLockers.Length; i++)
+            {
+                var localI = i;
+                disposeTasks[i] = Task.Factory.StartNew(() => remoteLockers[localI].Dispose());
+            }
+            Task.WaitAll(disposeTasks);
             LogRemoteLockerPerfStat();
         }
 

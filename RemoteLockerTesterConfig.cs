@@ -16,6 +16,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
     public enum TimestampProviderStochasticType
     {
+        None,
         OnlyPositive,
         BothPositiveAndNegative
     }

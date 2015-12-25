@@ -102,8 +102,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             public long GetNowTicks()
             {
                 var diff = TimeSpan.FromSeconds(Rng.Next(50, 100)).Ticks;
-                if(stochasticType == TimestampProviderStochasticType.BothPositiveAndNegative)
+                switch(stochasticType)
+                {
+                case TimestampProviderStochasticType.BothPositiveAndNegative:
                     diff *= Rng.Next(-1, 2);
+                    break;
+                case TimestampProviderStochasticType.None:
+                    diff = 0;
+                    break;
+                }
                 return DateTime.UtcNow.Ticks + diff;
             }
 

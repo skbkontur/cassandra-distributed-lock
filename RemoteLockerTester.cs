@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 
+using GroboContainer.Infection;
+
 using GroBuf;
 using GroBuf.DataMembersExtracters;
 
@@ -87,6 +89,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private readonly RemoteLockerMetrics remoteLockerMetrics;
         private readonly CassandraRemoteLockImplementation cassandraRemoteLockImplementation;
 
+        [IgnoredImplementation]
         private class StochasticTimestampProvider : ITimestampProvider
         {
             private readonly TimestampProviderStochasticType stochasticType;

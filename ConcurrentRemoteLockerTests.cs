@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 using NUnit.Framework;
 
@@ -24,18 +25,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 
-        [TestCase(1, 1, 500, 0.01d, LocalRivalOptimization.Disabled)]
-        [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Enabled)]
-        [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Disabled)]
-        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Enabled)]
-        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Disabled)]
-        [TestCase(10, 5, 500, 0.09d, LocalRivalOptimization.Disabled)]
-        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Enabled)]
-        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Disabled)]
-        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled)]
-        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Enabled)]
-        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Disabled)]
-        public void Normal(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization)
+        [TestCase(1, 1, 500, 0.01d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Enabled, null)]
+        [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Enabled, null)]
+        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(10, 5, 500, 0.09d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Enabled, null)]
+        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled, 10)]
+        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Enabled, null)]
+        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Disabled, null)]
+        public void Normal(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization, int? syncIntervalInSeconds)
         {
             DoTest(new TestConfig
                 {
@@ -43,6 +45,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     LongRunningOpProbability = longRunningOpProbability,
                     OperationsPerThread = operationsPerThread,
                     FastRunningOpProbability = 0.2d,
+                    SyncInterval = syncIntervalInSeconds.HasValue ? TimeSpan.FromSeconds(syncIntervalInSeconds.Value) : (TimeSpan?)null,
                     TesterConfig = new RemoteLockerTesterConfig
                         {
                             LockersCount = threads,
@@ -68,6 +71,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     OperationsPerThread = operationsPerThread,
                     FastRunningOpProbability = 1.00d,
                     LongRunningOpProbability = 0.00d,
+                    SyncInterval = null,
                     TesterConfig = new RemoteLockerTesterConfig
                         {
                             LockersCount = threads,
@@ -91,6 +95,20 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             using(var tester = new RemoteLockerTester(cfg.TesterConfig))
             {
                 var stopSignal = new ManualResetEvent(false);
+                var syncSignal = new ManualResetEvent(true);
+                Task syncerThread = null;
+                if(cfg.SyncInterval.HasValue)
+                {
+                    syncerThread = Task.Factory.StartNew(() =>
+                        {
+                            do
+                            {
+                                syncSignal.Reset();
+                                Thread.Sleep(longOpDuration);
+                                syncSignal.Set();
+                            } while(!stopSignal.WaitOne(cfg.SyncInterval.Value));
+                        });
+                }
                 var localTester = tester;
                 var actions = new Action<MultithreadingTestHelper.RunState>[cfg.TesterConfig.LockersCount];
                 for(var th = 0; th < actions.Length; th++)
@@ -105,7 +123,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                     break;
                                 var lockIndex = rng.Next(lockIds.Length);
                                 var lockId = lockIds[lockIndex];
-                                var @lock = Lock(remoteLockCreator, rng, lockId, state);
+                                var @lock = Lock(remoteLockCreator, syncSignal, rng, lockId, state);
                                 if(@lock == null)
                                     break;
                                 var localOpsCounter = opsCounters.GetOrAdd(lockId, 0);
@@ -123,7 +141,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
                                 Assert.That(resources[lockId], Is.EqualTo(resource));
                                 Assert.That(opsCounters[lockId], Is.EqualTo(localOpsCounter));
-                                opsCounters[lockId] = localOpsCounter + 1;
+                                if(++localOpsCounter % (cfg.TesterConfig.LockersCount * cfg.OperationsPerThread / 100) == 0)
+                                    Console.Out.Write(".");
+                                opsCounters[lockId] = localOpsCounter;
                                 @lock.Dispose();
                                 Thread.Sleep(1);
                                 Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
@@ -132,27 +152,24 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 }
                 MultithreadingTestHelper.RunOnSeparateThreads(TimeSpan.FromMinutes(30), actions);
                 stopSignal.Set();
+                if(syncerThread != null)
+                    syncerThread.Wait();
                 Assert.That(opsCounters.Sum(x => x.Value), Is.EqualTo(cfg.TesterConfig.LockersCount * cfg.OperationsPerThread));
             }
         }
 
-        private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, Random rng, string lockId, MultithreadingTestHelper.RunState state)
+        private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, ManualResetEvent syncSignal, Random rng, string lockId, MultithreadingTestHelper.RunState state)
         {
             while(true)
             {
-                for(var i = 0; i < 10; i++)
-                {
-                    if(state.ErrorOccurred)
-                        break;
-                    IRemoteLock remoteLock;
-                    if(remoteLockCreator.TryGetLock(lockId, out remoteLock))
-                        return remoteLock;
-                }
                 if(state.ErrorOccurred)
-                    break;
-                Thread.Sleep(1);
+                    return null;
+                syncSignal.WaitOne();
+                IRemoteLock remoteLock;
+                if(remoteLockCreator.TryGetLock(lockId, out remoteLock))
+                    return remoteLock;
+                Thread.Sleep(rng.Next(32));
             }
-            return null;
         }
 
         private class TestConfig
@@ -161,6 +178,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             public int OperationsPerThread { get; set; }
             public double LongRunningOpProbability { get; set; }
             public double FastRunningOpProbability { get; set; }
+            public TimeSpan? SyncInterval { get; set; }
             public RemoteLockerTesterConfig TesterConfig { get; set; }
         }
     }

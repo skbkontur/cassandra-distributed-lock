@@ -40,13 +40,19 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             DoTest(new TestConfig
                 {
                     Locks = locks,
-                    Threads = threads,
                     LongRunningOpProbability = longRunningOpProbability,
-                    LocalRivalOptimization = localRivalOptimization,
                     OperationsPerThread = operationsPerThread,
                     FastRunningOpProbability = 0.2d,
-                    KeepLockAliveInterval = TimeSpan.FromSeconds(1),
-                    TimestampProviderStochasticType = TimestampProviderStochasticType.None
+                    TesterConfig = new RemoteLockerTesterConfig
+                        {
+                            LockersCount = threads,
+                            LocalRivalOptimization = localRivalOptimization,
+                            LockTtl = TimeSpan.FromSeconds(3),
+                            KeepLockAliveInterval = TimeSpan.FromSeconds(1),
+                            ChangeLockRowThreshold = 10,
+                            TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                        },
                 });
         }
 
@@ -59,38 +65,34 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             DoTest(new TestConfig
                 {
                     Locks = locks,
-                    Threads = threads,
                     OperationsPerThread = operationsPerThread,
-                    TimestampProviderStochasticType = stochasticType,
                     FastRunningOpProbability = 1.00d,
                     LongRunningOpProbability = 0.00d,
-                    KeepLockAliveInterval = TimeSpan.Zero,
-                    LocalRivalOptimization = LocalRivalOptimization.Disabled
+                    TesterConfig = new RemoteLockerTesterConfig
+                        {
+                            LockersCount = threads,
+                            LocalRivalOptimization = LocalRivalOptimization.Disabled,
+                            LockTtl = TimeSpan.FromSeconds(3),
+                            KeepLockAliveInterval = TimeSpan.Zero,
+                            ChangeLockRowThreshold = 2,
+                            TimestamProviderStochasticType = stochasticType,
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                        },
                 });
         }
 
         private static void DoTest(TestConfig cfg)
         {
-            var lockTtl = TimeSpan.FromSeconds(3);
-            const int cassOpAttempts = 1;
-            var cassOpTimeout = TimeSpan.FromSeconds(1);
-            var config = new RemoteLockerTesterConfig
-                {
-                    LockCreatorsCount = cfg.Threads,
-                    LocalRivalOptimization = cfg.LocalRivalOptimization,
-                    LockTtl = lockTtl,
-                    KeepLockAliveInterval = cfg.KeepLockAliveInterval,
-                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, cassOpAttempts, cassOpTimeout),
-                    StochasticType = cfg.TimestampProviderStochasticType
-                };
+            var cassandraOpTimeout = TimeSpan.FromMilliseconds(cfg.TesterConfig.CassandraClusterSettings.Timeout);
+            var longOpDuration = cfg.TesterConfig.LockTtl.Add(cassandraOpTimeout).Multiply(cfg.TesterConfig.CassandraClusterSettings.Attempts);
             var lockIds = Enumerable.Range(0, cfg.Locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var resources = new ConcurrentDictionary<string, Guid>();
             var opsCounters = new ConcurrentDictionary<string, int>();
-            using(var tester = new RemoteLockerTester(config))
+            using(var tester = new RemoteLockerTester(cfg.TesterConfig))
             {
                 var stopSignal = new ManualResetEvent(false);
                 var localTester = tester;
-                var actions = new Action<MultithreadingTestHelper.RunState>[cfg.Threads];
+                var actions = new Action<MultithreadingTestHelper.RunState>[cfg.TesterConfig.LockersCount];
                 for(var th = 0; th < actions.Length; th++)
                 {
                     var remoteLockCreator = tester[th];
@@ -113,7 +115,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 if(rng.NextDouble() < cfg.FastRunningOpProbability)
                                     opDuration = TimeSpan.Zero;
                                 else if(rng.NextDouble() < cfg.LongRunningOpProbability)
-                                    opDuration = opDuration.Add(lockTtl).Add(cassOpTimeout.Multiply(cassOpAttempts));
+                                    opDuration = opDuration.Add(longOpDuration);
                                 Thread.Sleep(opDuration);
                                 CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
                                 Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
@@ -130,7 +132,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 }
                 MultithreadingTestHelper.RunOnSeparateThreads(TimeSpan.FromMinutes(30), actions);
                 stopSignal.Set();
-                Assert.That(opsCounters.Sum(x => x.Value), Is.EqualTo(cfg.Threads * cfg.OperationsPerThread));
+                Assert.That(opsCounters.Sum(x => x.Value), Is.EqualTo(cfg.TesterConfig.LockersCount * cfg.OperationsPerThread));
             }
         }
 
@@ -156,13 +158,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private class TestConfig
         {
             public int Locks { get; set; }
-            public int Threads { get; set; }
             public int OperationsPerThread { get; set; }
             public double LongRunningOpProbability { get; set; }
             public double FastRunningOpProbability { get; set; }
-            public LocalRivalOptimization LocalRivalOptimization { get; set; }
-            public TimestampProviderStochasticType TimestampProviderStochasticType { get; set; }
-            public TimeSpan KeepLockAliveInterval { get; set; }
+            public RemoteLockerTesterConfig TesterConfig { get; set; }
         }
     }
 }

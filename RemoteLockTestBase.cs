@@ -44,7 +44,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             ConfigureContainer(container);
             var cassandraClusterSettings = StartSingleCassandraSetUp.Node.CreateSettings(IPAddress.Loopback);
             container.Configurator.ForAbstraction<ICassandraClusterSettings>().UseInstances(cassandraClusterSettings);
-            var settings = new CassandraRemoteLockImplementationSettings(ColumnFamilies.remoteLock, TimeSpan.FromMinutes(3), TimeSpan.FromSeconds(5), 10);
+            var settings = new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), ColumnFamilies.remoteLock, TimeSpan.FromMinutes(3), TimeSpan.FromSeconds(5), 10);
             var remoteLockImplementation = container.Create<CassandraRemoteLockImplementationSettings, CassandraRemoteLockImplementation>(settings);
             container.Configurator.ForAbstraction<IRemoteLockImplementation>().UseInstances(remoteLockImplementation);
 

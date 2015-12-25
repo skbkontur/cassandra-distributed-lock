@@ -77,11 +77,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             var config = new RemoteLockerTesterConfig
                 {
-                    LockCreatorsCount = 2,
+                    LockersCount = 2,
                     LocalRivalOptimization = LocalRivalOptimization.Disabled,
                     LockTtl = TimeSpan.FromSeconds(10),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(5),
-                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                    ChangeLockRowThreshold = 10,
+                    TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts: 1, timeout: TimeSpan.FromSeconds(1)),
                 };
             using(var tester = new RemoteLockerTester(config))
             {
@@ -101,10 +103,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             var config = new RemoteLockerTesterConfig
                 {
-                    LockCreatorsCount = 2,
+                    LockersCount = 2,
                     LocalRivalOptimization = LocalRivalOptimization.Disabled,
                     LockTtl = TimeSpan.FromSeconds(5),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(10),
+                    ChangeLockRowThreshold = 10,
+                    TimestamProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
             using(var tester = new RemoteLockerTester(config))

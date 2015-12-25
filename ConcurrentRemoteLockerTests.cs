@@ -77,7 +77,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             LockersCount = threads,
                             LocalRivalOptimization = LocalRivalOptimization.Disabled,
                             LockTtl = TimeSpan.FromSeconds(3),
-                            KeepLockAliveInterval = TimeSpan.Zero,
+                            KeepLockAliveInterval = TimeSpan.FromMilliseconds(16),
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = stochasticType,
                             CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),

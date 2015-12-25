@@ -92,8 +92,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [IgnoredImplementation]
         private class StochasticTimestampProvider : ITimestampProvider
         {
-            private readonly TimestampProviderStochasticType stochasticType;
-
             public StochasticTimestampProvider(TimestampProviderStochasticType stochasticType)
             {
                 this.stochasticType = stochasticType;
@@ -104,6 +102,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 var diff = TimeSpan.FromSeconds(Rng.Next(50, 100)).Ticks;
                 switch(stochasticType)
                 {
+                case TimestampProviderStochasticType.OnlyPositive:
+                    break;
                 case TimestampProviderStochasticType.BothPositiveAndNegative:
                     diff *= Rng.Next(-1, 2);
                     break;
@@ -114,10 +114,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 return DateTime.UtcNow.Ticks + diff;
             }
 
+            private static Random Rng { get { return random ?? (random = new Random(Guid.NewGuid().GetHashCode())); } }
+
             [ThreadStatic]
             private static Random random;
 
-            private static Random Rng { get { return random ?? (random = new Random(Guid.NewGuid().GetHashCode())); } }
+            private readonly TimestampProviderStochasticType stochasticType;
         }
     }
 }

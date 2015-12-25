@@ -11,19 +11,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class CassandraRemoteLockImplementation : IRemoteLockImplementation
     {
-        public CassandraRemoteLockImplementation(
-            ICassandraCluster cassandraCluster, 
-            ISerializer serializer, 
-            CassandraRemoteLockImplementationSettings settings,
-            ITimestampProvider timestampProvider = null)
+        public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
         {
             var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(settings.ColumnFamilyFullName.KeyspaceName, settings.ColumnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
             singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = settings.LockTtl;
             keepLockAliveInterval = settings.KeepLockAliveInterval;
-            this.timestampProvider = timestampProvider ?? new DefaultTimestampProvider();
-            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, this.timestampProvider, settings.ColumnFamilyFullName);
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
+            timestampProvider = settings.TimestampProvider;
+            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings.TimestampProvider, settings.ColumnFamilyFullName);
         }
 
         public TimeSpan KeepLockAliveInterval { get { return keepLockAliveInterval; } }
@@ -147,7 +143,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;
-        private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;
         private readonly ITimestampProvider timestampProvider;
+        private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;
     }
 }

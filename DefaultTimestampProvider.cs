@@ -2,7 +2,7 @@
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
-    internal class DefaultTimestampProvider : ITimestampProvider
+    public class DefaultTimestampProvider : ITimestampProvider
     {
         public long GetNowTicks()
         {

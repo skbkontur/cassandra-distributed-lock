@@ -19,7 +19,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             keepLockAliveInterval = settings.KeepLockAliveInterval;
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
             timestampProvider = settings.TimestampProvider;
-            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings.TimestampProvider, settings.ColumnFamilyFullName);
+            baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings);
         }
 
         public TimeSpan KeepLockAliveInterval { get { return keepLockAliveInterval; } }

@@ -16,16 +16,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     internal class CassandraBaseLockOperationsPerformer
     {
-        public CassandraBaseLockOperationsPerformer(
-            ICassandraCluster cassandraCluster, 
-            ISerializer serializer, 
-            ITimestampProvider timestampProvider,
-            ColumnFamilyFullName columnFamilyFullName)
+        public CassandraBaseLockOperationsPerformer(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
         {
             this.cassandraCluster = cassandraCluster;
             this.serializer = serializer;
-            this.timestampProvider = timestampProvider;
-            this.columnFamilyFullName = columnFamilyFullName;
+            timestampProvider = settings.TimestampProvider;
+            columnFamilyFullName = settings.ColumnFamilyFullName;
+            lockTtl = settings.LockTtl;
         }
 
         public void WriteThread([NotNull] string lockRowId, long threshold, [NotNull] string threadId, TimeSpan ttl)
@@ -63,8 +60,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public string[] SearchThreads([NotNull] string lockRowId, long? threshold)
         {
             Column[] columns = null;
-            var exclusiveStartColumnName = ThresholdToString(threshold - TimeSpan.FromMinutes(5).Ticks);
-            MakeInConnection(connection => columns = connection.GetRow(lockRowId, exclusiveStartColumnName).ToArray());
+            var inclusiveStartColumnName = ThresholdToString(threshold - lockTtl.Multiply(2).Ticks);
+            MakeInConnection(connection => columns = connection.GetColumns(lockRowId, inclusiveStartColumnName, endColumnName: null, count: int.MaxValue));
             return columns
                 .Where(x => x.Value != null && x.Value.Length != 0)
                 .Select(x => TransformColumnNameToThreadId(x.Name))
@@ -181,6 +178,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly ISerializer serializer;
         private readonly ITimestampProvider timestampProvider;
         private readonly ColumnFamilyFullName columnFamilyFullName;
+        private readonly TimeSpan lockTtl;
         private long lastTicks;
     }
 }

@@ -21,8 +21,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public void TestFixtureSetUp()
         {
             var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
-            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
+            cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
             cassandraSchemeActualizer.AddNewColumnFamilies();
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            cassandraSchemeActualizer.TruncateAllColumnFamilies();
         }
 
         [TestCase(1, 1, 500, 0.01d, LocalRivalOptimization.Disabled, null)]
@@ -81,6 +87,32 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = stochasticType,
                             CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                        },
+                });
+        }
+
+        [TestCase(1, 1, 1000, TimestampProviderStochasticType.None)]
+        [TestCase(1, 10, 1000, TimestampProviderStochasticType.None)]
+        [TestCase(1, 25, 1000, TimestampProviderStochasticType.OnlyPositive)]
+        [TestCase(1, 25, 1000, TimestampProviderStochasticType.BothPositiveAndNegative)]
+        public void SmallTtl(int locks, int threads, int operationsPerThread, TimestampProviderStochasticType stochasticType)
+        {
+            DoTest(new TestConfig
+                {
+                    Locks = locks,
+                    OperationsPerThread = operationsPerThread,
+                    FastRunningOpProbability = 1.00d,
+                    LongRunningOpProbability = 0.00d,
+                    SyncInterval = null,
+                    TesterConfig = new RemoteLockerTesterConfig
+                        {
+                            LockersCount = threads,
+                            LocalRivalOptimization = LocalRivalOptimization.Disabled,
+                            LockTtl = TimeSpan.FromMilliseconds(2000),
+                            KeepLockAliveInterval = TimeSpan.FromMilliseconds(50),
+                            ChangeLockRowThreshold = int.MaxValue,
+                            TimestamProviderStochasticType = stochasticType,
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromMilliseconds(350)),
                         },
                 });
         }
@@ -171,6 +203,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 Thread.Sleep(rng.Next(32));
             }
         }
+
+        private CassandraSchemeActualizer cassandraSchemeActualizer;
 
         private class TestConfig
         {

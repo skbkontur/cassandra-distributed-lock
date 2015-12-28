@@ -25,10 +25,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 diff = 0;
                 break;
             case TimestampProviderStochasticType.OnlyPositive:
-                diff = TimeSpan.FromMilliseconds(Rng.Next(1, (int)lockTtl.TotalMilliseconds)).Ticks;
+                diff = TimeSpan.FromMilliseconds(Rng.Next(Math.Max(1, (int)lockTtl.TotalMilliseconds / 2), (int)lockTtl.TotalMilliseconds)).Ticks;
                 break;
             case TimestampProviderStochasticType.BothPositiveAndNegative:
-                diff = TimeSpan.FromMilliseconds(Rng.Next(1, (int)lockTtl.TotalMilliseconds / 2)).Ticks * Rng.Next(-1, 2);
+                diff = TimeSpan.FromMilliseconds(Rng.Next(Math.Max(1, (int)lockTtl.TotalMilliseconds / 4), (int)lockTtl.TotalMilliseconds / 2)).Ticks * Rng.Next(-1, 2);
                 break;
             }
             return DateTime.UtcNow.Ticks + diff;

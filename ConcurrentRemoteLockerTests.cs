@@ -75,15 +75,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 {
                     Locks = locks,
                     OperationsPerThread = operationsPerThread,
-                    FastRunningOpProbability = 1.00d,
+                    FastRunningOpProbability = 0.90d,
                     LongRunningOpProbability = 0.00d,
                     SyncInterval = null,
                     TesterConfig = new RemoteLockerTesterConfig
                         {
                             LockersCount = threads,
                             LocalRivalOptimization = LocalRivalOptimization.Disabled,
-                            LockTtl = TimeSpan.FromSeconds(3),
-                            KeepLockAliveInterval = TimeSpan.FromMilliseconds(16),
+                            LockTtl = TimeSpan.FromMinutes(3),
+                            KeepLockAliveInterval = TimeSpan.Zero,
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = stochasticType,
                             CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),

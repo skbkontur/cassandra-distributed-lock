@@ -23,7 +23,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var localRivalOptimizationIsEnabled = config.LocalRivalOptimization != LocalRivalOptimization.Disabled;
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
             var cassandraCluster = new CassandraCluster(config.CassandraClusterSettings);
-            var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType);
+            var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType, config.LockTtl);
             var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, ColumnFamilies.remoteLock, config.LockTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
             cassandraRemoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings);
             remoteLockers = new RemoteLocker[config.LockersCount];

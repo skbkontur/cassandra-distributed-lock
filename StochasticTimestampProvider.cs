@@ -9,23 +9,26 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
     [IgnoredImplementation]
     public class StochasticTimestampProvider : ITimestampProvider
     {
-        public StochasticTimestampProvider(TimestampProviderStochasticType stochasticType)
+        public StochasticTimestampProvider(TimestampProviderStochasticType stochasticType, TimeSpan lockTtl)
         {
             this.stochasticType = stochasticType;
+            this.lockTtl = lockTtl;
         }
 
         public long GetNowTicks()
         {
-            var diff = TimeSpan.FromSeconds(Rng.Next(50, 100)).Ticks;
+            // lock algorithm is correct only when time is out of sync by no more than lockTtl.
+            long diff = 0;
             switch(stochasticType)
             {
             case TimestampProviderStochasticType.None:
                 diff = 0;
                 break;
             case TimestampProviderStochasticType.OnlyPositive:
+                diff = TimeSpan.FromMilliseconds(Rng.Next(1, (int)lockTtl.TotalMilliseconds)).Ticks;
                 break;
             case TimestampProviderStochasticType.BothPositiveAndNegative:
-                diff *= Rng.Next(-1, 2);
+                diff = TimeSpan.FromMilliseconds(Rng.Next(1, (int)lockTtl.TotalMilliseconds / 2)).Ticks * Rng.Next(-1, 2);
                 break;
             }
             return DateTime.UtcNow.Ticks + diff;
@@ -37,5 +40,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private static Random random;
 
         private readonly TimestampProviderStochasticType stochasticType;
+        private readonly TimeSpan lockTtl;
     }
 }

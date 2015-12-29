@@ -13,6 +13,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public int ChangeLockRowThreshold { get; set; }
         public TimestampProviderStochasticType TimestamProviderStochasticType { get; set; }
         public ICassandraClusterSettings CassandraClusterSettings { get; set; }
+        public double? CassandraFailProbability { get; set; }
 
         public static RemoteLockerTesterConfig Default()
         {
@@ -25,6 +26,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = Settings.CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node),
+                    CassandraFailProbability = null
                 };
         }
     }

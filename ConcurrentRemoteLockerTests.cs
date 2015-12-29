@@ -10,6 +10,7 @@ using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests.FiledCassandra;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
@@ -61,6 +62,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             ChangeLockRowThreshold = 10,
                             TimestamProviderStochasticType = TimestampProviderStochasticType.None,
                             CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                            CassandraFailProbability = null
                         },
                 });
         }
@@ -87,6 +89,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = stochasticType,
                             CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                            CassandraFailProbability = null
                         },
                 });
         }
@@ -113,6 +116,33 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             ChangeLockRowThreshold = int.MaxValue,
                             TimestamProviderStochasticType = stochasticType,
                             CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromMilliseconds(350)),
+                            CassandraFailProbability = null
+                        },
+                });
+        }
+
+        [TestCase(1, 1, 500, 0.01d)]
+        [TestCase(1, 1, 100, 0.01d)]
+        [TestCase(1, 10, 500, 0.005d)]
+        public void FailedCassandra(int locks, int threads, int operationsPerThread, double failProbability)
+        {
+            DoTest(new TestConfig
+                {
+                    Locks = locks,
+                    OperationsPerThread = operationsPerThread,
+                    FastRunningOpProbability = 0.20d,
+                    LongRunningOpProbability = 0.01d,
+                    SyncInterval = null,
+                    TesterConfig = new RemoteLockerTesterConfig
+                        {
+                            LockersCount = threads,
+                            LocalRivalOptimization = LocalRivalOptimization.Disabled,
+                            LockTtl = TimeSpan.FromSeconds(3),
+                            KeepLockAliveInterval = TimeSpan.FromSeconds(1),
+                            ChangeLockRowThreshold = 2,
+                            TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromMilliseconds(350)),
+                            CassandraFailProbability = failProbability
                         },
                 });
         }
@@ -124,6 +154,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var lockIds = Enumerable.Range(0, cfg.Locks).Select(x => Guid.NewGuid().ToString()).ToArray();
             var resources = new ConcurrentDictionary<string, Guid>();
             var opsCounters = new ConcurrentDictionary<string, int>();
+            var allowFails = cfg.TesterConfig.CassandraFailProbability.HasValue;
             using(var tester = new RemoteLockerTester(cfg.TesterConfig))
             {
                 var stopSignal = new ManualResetEvent(false);
@@ -149,36 +180,52 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     actions[th] = state =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
-                            for(var op = 0; op < cfg.OperationsPerThread; op++)
+                            var op = 0;
+                            while (op < cfg.OperationsPerThread)
                             {
-                                if(state.ErrorOccurred)
-                                    break;
-                                var lockIndex = rng.Next(lockIds.Length);
-                                var lockId = lockIds[lockIndex];
-                                var @lock = Lock(remoteLockCreator, syncSignal, rng, lockId, state);
-                                if(@lock == null)
-                                    break;
-                                var localOpsCounter = opsCounters.GetOrAdd(lockId, 0);
-                                var resource = Guid.NewGuid();
-                                resources[lockId] = resource;
-                                var opDuration = TimeSpan.FromMilliseconds(rng.Next(1, 47));
-                                if(rng.NextDouble() < cfg.FastRunningOpProbability)
-                                    opDuration = TimeSpan.Zero;
-                                else if(rng.NextDouble() < cfg.LongRunningOpProbability)
-                                    opDuration = opDuration.Add(longOpDuration);
-                                Thread.Sleep(opDuration);
-                                CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
-                                Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
-                                var lockMetadata = localTester.GetLockMetadata(lockId);
-                                Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
-                                Assert.That(resources[lockId], Is.EqualTo(resource));
-                                Assert.That(opsCounters[lockId], Is.EqualTo(localOpsCounter));
-                                if(++localOpsCounter % (cfg.TesterConfig.LockersCount * cfg.OperationsPerThread / 100) == 0)
-                                    Console.Out.Write(".");
-                                opsCounters[lockId] = localOpsCounter;
-                                @lock.Dispose();
-                                Thread.Sleep(1);
-                                Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
+                                IRemoteLock @lock = null;
+                                try
+                                {
+                                    if(state.ErrorOccurred)
+                                        break;
+                                    var lockIndex = rng.Next(lockIds.Length);
+                                    var lockId = lockIds[lockIndex];
+                                    @lock = Lock(remoteLockCreator, syncSignal, rng, lockId, state);
+                                    if(@lock == null)
+                                        break;
+                                    var localOpsCounter = opsCounters.GetOrAdd(lockId, 0);
+                                    var resource = Guid.NewGuid();
+                                    resources[lockId] = resource;
+                                    var opDuration = TimeSpan.FromMilliseconds(rng.Next(1, 47));
+                                    if(rng.NextDouble() < cfg.FastRunningOpProbability)
+                                        opDuration = TimeSpan.Zero;
+                                    else if(rng.NextDouble() < cfg.LongRunningOpProbability)
+                                        opDuration = opDuration.Add(longOpDuration);
+                                    Thread.Sleep(opDuration);
+                                    CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
+                                    Assert.That(localTester.GetThreadsInShadeRow(lockId), Is.Not.Contains(@lock.ThreadId));
+                                    var lockMetadata = localTester.GetLockMetadata(lockId);
+                                    Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
+                                    Assert.That(resources[lockId], Is.EqualTo(resource));
+                                    Assert.That(opsCounters[lockId], Is.EqualTo(localOpsCounter));
+                                    if(++localOpsCounter % (cfg.TesterConfig.LockersCount * cfg.OperationsPerThread / 100) == 0)
+                                        Console.Out.Write(".");
+                                    opsCounters[lockId] = localOpsCounter;
+                                    @lock.Dispose();
+                                    Thread.Sleep(1);
+                                    Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
+                                    op++;
+                                }
+                                catch(FailedCassandraClusterException)
+                                {
+                                    if(!allowFails)
+                                        throw;
+                                }
+                                finally
+                                {
+                                    if (@lock != null)
+                                        @lock.Dispose();
+                                }
                             }
                         };
                 }

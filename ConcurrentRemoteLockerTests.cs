@@ -184,6 +184,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             while (op < cfg.OperationsPerThread)
                             {
                                 IRemoteLock @lock = null;
+                                var disposed = false;
                                 try
                                 {
                                     if(state.ErrorOccurred)
@@ -212,6 +213,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                         Console.Out.Write(".");
                                     opsCounters[lockId] = localOpsCounter;
                                     @lock.Dispose();
+                                    disposed = true;
                                     Thread.Sleep(1);
                                     Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                     op++;
@@ -223,7 +225,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 }
                                 finally
                                 {
-                                    if (@lock != null)
+                                    if (@lock != null && !disposed)
                                         @lock.Dispose();
                                 }
                             }

@@ -26,30 +26,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             MayBeFail();
             connection.DeleteRows(keys, timestamp, batchSize);
+            MayBeFail();
         }
 
         public void DeleteRow(string key, long? timestamp = null)
         {
             MayBeFail();
             connection.DeleteRow(key, timestamp);
+            MayBeFail();
         }
 
         public void DeleteColumn(string key, string columnName, long? timestamp = null)
         {
             MayBeFail();
             connection.DeleteColumn(key, columnName, timestamp);
+            MayBeFail();
         }
 
         public void AddColumn(string key, Column column)
         {
             MayBeFail();
             connection.AddColumn(key, column);
+            MayBeFail();
         }
 
         public void AddColumn(Func<int, KeyColumnPair<string>> createKeyColumnPair)
         {
             MayBeFail();
             connection.AddColumn(createKeyColumnPair);
+            MayBeFail();
         }
 
         public Column GetColumn(string key, string columnName)
@@ -68,30 +73,35 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             MayBeFail();
             connection.DeleteBatch(key, columnNames, timestamp);
+            MayBeFail();
         }
 
         public void AddBatch(string key, IEnumerable<Column> columns)
         {
             MayBeFail();
             connection.AddBatch(key, columns);
+            MayBeFail();
         }
 
         public void AddBatch(Func<int, KeyColumnsPair<string>> createKeyColumnsPair)
         {
             MayBeFail();
             connection.AddBatch(createKeyColumnsPair);
+            MayBeFail();
         }
 
         public void BatchInsert(IEnumerable<KeyValuePair<string, IEnumerable<Column>>> data)
         {
             MayBeFail();
             connection.BatchInsert(data);
+            MayBeFail();
         }
 
         public void BatchDelete(IEnumerable<KeyValuePair<string, IEnumerable<string>>> data, long? timestamp = null)
         {
             MayBeFail();
             connection.BatchDelete(data, timestamp);
+            MayBeFail();
         }
 
         public List<KeyValuePair<string, Column[]>> GetRows(IEnumerable<string> keys, string startColumnName, int count)
@@ -132,7 +142,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         public void Truncate()
         {
-            MayBeFail();
             connection.Truncate();
         }
 

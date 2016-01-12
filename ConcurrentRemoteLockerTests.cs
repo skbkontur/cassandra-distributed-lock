@@ -121,9 +121,10 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 });
         }
 
-        [TestCase(1, 1, 500, 0.01d)]
         [TestCase(1, 1, 100, 0.01d)]
+        [TestCase(1, 2, 500, 0.01d)]
         [TestCase(1, 10, 500, 0.005d)]
+        [TestCase(2, 5, 100, 0.01d)]
         public void FailedCassandra(int locks, int threads, int operationsPerThread, double failProbability)
         {
             DoTest(new TestConfig
@@ -181,7 +182,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
                             var op = 0;
-                            while (op < cfg.OperationsPerThread)
+                            while(op < cfg.OperationsPerThread)
                             {
                                 IRemoteLock @lock = null;
                                 var disposed = false;
@@ -215,7 +216,18 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                     @lock.Dispose();
                                     disposed = true;
                                     Thread.Sleep(1);
-                                    Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
+                                    if(allowFails)
+                                    {
+                                        /*
+                                         * If Cassandra can fail, then @lock.Dispose() could not delete column from Cassandra.
+                                         * But it must be automatically deleted after lockTtl.                                     
+                                        */
+                                        Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not
+                                                                                               .Contains(@lock.ThreadId)
+                                                                                               .After(2 * cfg.TesterConfig.LockTtl.Milliseconds, 100));
+                                    }
+                                    else
+                                        Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
                                     op++;
                                 }
                                 catch(FailedCassandraClusterException)
@@ -225,7 +237,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                 }
                                 finally
                                 {
-                                    if (@lock != null && !disposed)
+                                    if(@lock != null && !disposed)
                                         @lock.Dispose();
                                 }
                             }

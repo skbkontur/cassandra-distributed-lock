@@ -33,7 +33,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             LockAttemptResult result;
             var probableOwnerThreadId = lockMetadata.ProbableOwnerThreadId;
             if(!string.IsNullOrEmpty(probableOwnerThreadId) && baseOperationsPerformer.ThreadAlive(lockMetadata.LockRowId, lockMetadata.PreviousThreshold, probableOwnerThreadId))
-                result = probableOwnerThreadId == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(probableOwnerThreadId);
+            {
+                if (probableOwnerThreadId == threadId)
+                    throw new InvalidOperationException(string.Format("TryLock(lockId = {0}, threadId = {1}): probableOwnerThreadId = {1}, but is seems impossible case", lockId, threadId));
+                result = LockAttemptResult.AnotherOwner(probableOwnerThreadId);
+            }
             else
                 result = RunBattle(lockMetadata, threadId, newThreshold);
 

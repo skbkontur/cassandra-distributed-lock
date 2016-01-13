@@ -220,10 +220,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                      * But it must be automatically deleted after lockTtl.
                                      * For performance reason we do first check manually, because .After sleeps at least polling interval before first check
                                      */
-                                    if (localTester.GetThreadsInMainRow(lockId).Contains(@lock.ThreadId))
+                                    if(localTester.GetThreadsInMainRow(lockId).Contains(@lock.ThreadId))
+                                    {
                                         Assert.That(() => localTester.GetThreadsInMainRow(lockId), Is.Not
-                                                                                               .Contains(@lock.ThreadId)
-                                                                                               .After(2 * (int)cfg.TesterConfig.LockTtl.TotalMilliseconds, 100));
+                                                                                                     .Contains(@lock.ThreadId)
+                                                                                                     .After(2 * (int)cfg.TesterConfig.LockTtl.TotalMilliseconds, 100));
+                                    }
                                     op++;
                                 }
                                 catch(FailedCassandraClusterException)

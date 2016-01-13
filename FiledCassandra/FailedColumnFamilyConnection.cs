@@ -8,8 +8,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 {
     public class FailedColumnFamilyConnection : IColumnFamilyConnection
     {
-        public FailedColumnFamilyConnection(
-            IColumnFamilyConnection connection, Random random, double failProbability)
+        public FailedColumnFamilyConnection(IColumnFamilyConnection connection, Random random, double failProbability)
         {
             this.connection = connection;
             this.random = random;
@@ -208,7 +207,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             lock(random)
             {
-                if (random.NextDouble() <= failProbability)
+                if(random.NextDouble() < failProbability)
                     throw new FailedCassandraClusterException("Ошибка при работе с кассандрой");
             }
         }

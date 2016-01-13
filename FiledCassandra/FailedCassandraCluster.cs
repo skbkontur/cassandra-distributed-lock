@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 using GroboContainer.Infection;
 
@@ -38,7 +37,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         public IColumnFamilyConnection RetrieveColumnFamilyConnection(string keySpaceName, string columnFamilyName)
         {
-            return new FailedColumnFamilyConnection(cassandraCluster.RetrieveColumnFamilyConnection(keySpaceName, columnFamilyName), random, failProbability);
+            var columnFamilyConnection = cassandraCluster.RetrieveColumnFamilyConnection(keySpaceName, columnFamilyName);
+            return new FailedColumnFamilyConnection(columnFamilyConnection, random, failProbability);
         }
 
         public IColumnFamilyConnectionImplementation RetrieveColumnFamilyConnectionImplementation(string keySpaceName, string columnFamilyName)
@@ -55,10 +55,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             cassandraCluster.ActualizeKeyspaces(keyspaces);
         }
-        
-        private Random random = new Random(Guid.NewGuid().GetHashCode());
-        
+
         private readonly double failProbability;
         private readonly ICassandraCluster cassandraCluster;
+        private readonly Random random = new Random(Guid.NewGuid().GetHashCode());
     }
 }

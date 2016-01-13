@@ -61,7 +61,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             Column[] columns = null;
             var inclusiveStartColumnName = ThresholdToString(threshold - lockTtl.Multiply(2).Ticks);
-            MakeInConnection(connection => columns = connection.GetColumns(lockRowId, inclusiveStartColumnName, endColumnName: null, count: int.MaxValue));
+            MakeInConnection(connection => columns = connection.GetColumns(lockRowId, inclusiveStartColumnName, endColumnName : null, count : int.MaxValue));
             return columns
                 .Where(x => x.Value != null && x.Value.Length != 0)
                 .Select(x => TransformColumnNameToThreadId(x.Name))

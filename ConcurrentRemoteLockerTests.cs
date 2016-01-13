@@ -122,8 +122,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         }
 
         [TestCase(1, 1, 100, 0.01d)]
-        [TestCase(1, 2, 500, 0.01d)]
-        [TestCase(1, 10, 500, 0.005d)]
+        [TestCase(1, 4, 300, 0.005d)]
         [TestCase(2, 5, 100, 0.01d)]
         public void FailedCassandra(int locks, int threads, int operationsPerThread, double failProbability)
         {
@@ -216,18 +215,15 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                                     @lock.Dispose();
                                     disposed = true;
                                     Thread.Sleep(1);
-                                    if(allowFails)
-                                    {
-                                        /*
-                                         * If Cassandra can fail, then @lock.Dispose() could not delete column from Cassandra.
-                                         * But it must be automatically deleted after lockTtl.                                     
-                                        */
-                                        Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not
+                                    /*
+                                     * If Cassandra can fail, then @lock.Dispose() could not delete column from Cassandra.
+                                     * But it must be automatically deleted after lockTtl.
+                                     * For performance reason we do first check manually, because .After sleeps at least polling interval before first check
+                                     */
+                                    if (localTester.GetThreadsInMainRow(lockId).Contains(@lock.ThreadId))
+                                        Assert.That(() => localTester.GetThreadsInMainRow(lockId), Is.Not
                                                                                                .Contains(@lock.ThreadId)
-                                                                                               .After(2 * cfg.TesterConfig.LockTtl.Milliseconds, 100));
-                                    }
-                                    else
-                                        Assert.That(localTester.GetThreadsInMainRow(lockId), Is.Not.Contains(@lock.ThreadId));
+                                                                                               .After(2 * (int)cfg.TesterConfig.LockTtl.TotalMilliseconds, 100));
                                     op++;
                                 }
                                 catch(FailedCassandraClusterException)

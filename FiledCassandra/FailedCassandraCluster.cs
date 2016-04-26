@@ -51,9 +51,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             return cassandraCluster.GetKnowledges();
         }
 
-        public void ActualizeKeyspaces(KeyspaceScheme[] keyspaces, ICassandraActualizerEventListener eventListener = null)
+        public void ActualizeKeyspaces(KeyspaceScheme[] keyspaces, ICassandraActualizerEventListener eventListener = null, bool changeExistingKeyspaceMetadata = false)
         {
-            cassandraCluster.ActualizeKeyspaces(keyspaces);
+            cassandraCluster.ActualizeKeyspaces(keyspaces, eventListener, changeExistingKeyspaceMetadata);
         }
 
         private readonly double failProbability;

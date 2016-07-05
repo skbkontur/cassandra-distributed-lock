@@ -13,8 +13,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
     {
         public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
         {
-            var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(settings.ColumnFamilyFullName.KeyspaceName, settings.ColumnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
-            singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = settings.LockTtl;
             keepLockAliveInterval = settings.KeepLockAliveInterval;
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
@@ -142,7 +140,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return Math.Max(timestampProvider.GetNowTicks(), previousThreshold + 1);
         }
 
-        private readonly TimeSpan singleOperationTimeout;
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;

@@ -23,6 +23,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             timestampProvider = settings.TimestampProvider;
             columnFamilyFullName = settings.ColumnFamilyFullName;
             lockTtl = settings.LockTtl;
+            lockMetadataTtl = settings.LockMetadataTtl;
         }
 
         public void WriteThread([NotNull] string lockRowId, long threshold, [NotNull] string threadId, TimeSpan ttl)
@@ -79,28 +80,28 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                             Name = lockRowIdColumnName,
                             Value = serializer.Serialize(newLockMetadata.LockRowId),
                             Timestamp = newTimestamp,
-                            TTL = null,
+                            TTL = (int?)lockMetadataTtl.TotalSeconds,
                         },
                     new Column
                         {
                             Name = lockCountColumnName,
                             Value = serializer.Serialize(newLockMetadata.LockCount),
                             Timestamp = newTimestamp,
-                            TTL = null,
+                            TTL = (int?)lockMetadataTtl.TotalSeconds,
                         },
                     new Column
                         {
                             Name = previousThresholdColumnName,
                             Value = serializer.Serialize(newLockMetadata.Threshold),
                             Timestamp = newTimestamp,
-                            TTL = null,
+                            TTL = (int?)lockMetadataTtl.TotalSeconds,
                         },
                     new Column
                         {
                             Name = probableOwnerThreadIdColumnName,
                             Value = serializer.Serialize(newLockMetadata.OwnerThreadId),
                             Timestamp = newTimestamp,
-                            TTL = null,
+                            TTL = (int?)lockMetadataTtl.TotalSeconds,
                         }
                 };
             var rowKey = newLockMetadata.LockId.ToLockMetadataRowKey();
@@ -179,6 +180,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly ITimestampProvider timestampProvider;
         private readonly ColumnFamilyFullName columnFamilyFullName;
         private readonly TimeSpan lockTtl;
+        private readonly TimeSpan lockMetadataTtl;
         private long lastTicks;
     }
 }

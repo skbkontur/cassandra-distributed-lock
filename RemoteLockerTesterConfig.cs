@@ -9,6 +9,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         public int LockersCount { get; set; }
         public LocalRivalOptimization LocalRivalOptimization { get; set; }
         public TimeSpan LockTtl { get; set; }
+        public TimeSpan LockMetadataTtl { get; set; }
         public TimeSpan KeepLockAliveInterval { get; set; }
         public int ChangeLockRowThreshold { get; set; }
         public TimestampProviderStochasticType TimestamProviderStochasticType { get; set; }
@@ -22,11 +23,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     LockersCount = 1,
                     LocalRivalOptimization = LocalRivalOptimization.Enabled,
                     LockTtl = TimeSpan.FromSeconds(10),
+                    LockMetadataTtl = TimeSpan.FromMinutes(1),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(2),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = Settings.CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node),
-                    CassandraFailProbability = null
+                    CassandraFailProbability = null,
                 };
         }
     }

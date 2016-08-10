@@ -6,6 +6,7 @@ using GroBuf;
 using JetBrains.Annotations;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
+using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
@@ -13,6 +14,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
     {
         public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
         {
+            metrics = new RemoteLockerMetricsBenchTmp();
+            var connectionParameters = cassandraCluster.RetrieveColumnFamilyConnection(settings.ColumnFamilyFullName.KeyspaceName, settings.ColumnFamilyFullName.ColumnFamilyName).GetConnectionParameters();
+            singleOperationTimeout = TimeSpan.FromMilliseconds(connectionParameters.Attempts * connectionParameters.Timeout);
             lockTtl = settings.LockTtl;
             keepLockAliveInterval = settings.KeepLockAliveInterval;
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
@@ -25,35 +29,50 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [NotNull]
         public LockAttemptResult TryLock([NotNull] string lockId, [NotNull] string threadId)
         {
-            var lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
+            LockMetadata lockMetadata;
+            using(metrics.TryGetLockMetadata1.NewContext(FormatLockOperationId(lockId, threadId)))
+                lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
             var newThreshold = NewThreshold(lockMetadata.PreviousThreshold ?? (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks);
 
             LockAttemptResult result;
             var probableOwnerThreadId = lockMetadata.ProbableOwnerThreadId;
-            if(!string.IsNullOrEmpty(probableOwnerThreadId) && baseOperationsPerformer.ThreadAlive(lockMetadata.LockRowId, lockMetadata.PreviousThreshold, probableOwnerThreadId))
+
+            bool condition;
+            using(metrics.TryGetLockMetadata1.NewContext(FormatLockOperationId(lockId, threadId)))
+                condition = !string.IsNullOrEmpty(probableOwnerThreadId) && baseOperationsPerformer.ThreadAlive(lockMetadata.LockRowId, lockMetadata.PreviousThreshold, probableOwnerThreadId);
+
+            if(condition)
             {
                 if(probableOwnerThreadId == threadId)
                     throw new InvalidOperationException(string.Format("TryLock(lockId = {0}, threadId = {1}): probableOwnerThreadId == threadId, though it seemed to be impossible!", lockId, threadId));
                 result = LockAttemptResult.AnotherOwner(probableOwnerThreadId);
             }
             else
-                result = RunBattle(lockMetadata, threadId, newThreshold);
+            {
+                using (metrics.RunBattle.NewContext(FormatLockOperationId(lockId, threadId)))
+                    result = RunBattle(lockMetadata, threadId, newThreshold);
+            }
 
             if(result.Status == LockAttemptStatus.Success)
             {
-                lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
+                using (metrics.TryGetLockMetadata2.NewContext(FormatLockOperationId(lockId, threadId)))
+                    lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
 
                 if(lockMetadata.LockCount <= changeLockRowThreshold)
                 {
                     var newLockMetadata = new NewLockMetadata(lockId, lockMetadata.LockRowId, lockMetadata.LockCount + 1, newThreshold, threadId);
-                    baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
+                    using (metrics.WriteLockMetadata1.NewContext(FormatLockOperationId(lockId, threadId)))
+                        baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
                 }
                 else
                 {
                     var newLockMetadata = new NewLockMetadata(lockId, Guid.NewGuid().ToString(), 1, newThreshold, threadId);
-                    baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
-                    baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
-                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl.Multiply(10));
+                    using (metrics.WriteThread1.NewContext(FormatLockOperationId(lockId, threadId)))
+                        baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
+                    using (metrics.WriteLockMetadata2.NewContext(FormatLockOperationId(lockId, threadId)))
+                        baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
+                    using (metrics.WriteThread2.NewContext(FormatLockOperationId(lockId, threadId)))
+                        baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl.Multiply(10));
                 }
             }
             return result;
@@ -62,7 +81,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [NotNull]
         private LockAttemptResult RunBattle([NotNull] LockMetadata lockMetadata, [NotNull] string threadId, long newThreshold)
         {
-            var items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
+            string[] items;
+            using (metrics.SearchThreads1.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
             if(items.Length == 1)
                 return items[0] == threadId ? LockAttemptResult.Success() : LockAttemptResult.AnotherOwner(items[0]);
             if(items.Length > 1)
@@ -71,22 +92,31 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
                     throw new Exception("Lock unknown exception");
                 return LockAttemptResult.AnotherOwner(items[0]);
             }
-            var beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
+            string[] beforeOurWriteShades;
+            using (metrics.SearchThreads2.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
             if(beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            baseOperationsPerformer.WriteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId, lockTtl);
-            var shades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
+            using (metrics.WriteThread3.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                baseOperationsPerformer.WriteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId, lockTtl);
+            string[] shades;
+            using (metrics.SearchThreads3.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                shades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
             if(shades.Length == 1)
             {
-                items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
+                using (metrics.SearchThreads4.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                    items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
                 if(items.Length == 0)
                 {
-                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
-                    baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId);
+                    using (metrics.WriteThread4.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                        baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
+                    using (metrics.DeleteThread1.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                        baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId);
                     return LockAttemptResult.Success();
                 }
             }
-            baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId);
+            using (metrics.DeleteThread2.NewContext(FormatLockOperationId(lockMetadata.LockId, threadId)))
+                baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId);
             return LockAttemptResult.ConcurrentAttempt();
         }
 
@@ -140,10 +170,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return Math.Max(timestampProvider.GetNowTicks(), previousThreshold + 1);
         }
 
+        private static string FormatLockOperationId(string lockId, string threadId)
+        {
+            return string.Format("lockId: {0}, threadId: {1}", lockId, threadId);
+        }
+
+        private readonly TimeSpan singleOperationTimeout;
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;
         private readonly ITimestampProvider timestampProvider;
         private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;
+        private readonly RemoteLockerMetricsBenchTmp metrics;
     }
 }

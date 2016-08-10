@@ -6,6 +6,8 @@ using JetBrains.Annotations;
 
 using log4net;
 
+using Metrics;
+
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
     public class RemoteLocker : IDisposable, IRemoteLockCreator
@@ -165,6 +167,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                             return null;
                         case LockAttemptStatus.ConcurrentAttempt:
                             var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
+                            metrics.SleepTimeTotalMeter.Mark(shortSleep);
+                            metrics.SleepTimeRate.Update(shortSleep);
                             logger.WarnFormat("remoteLockImplementation.TryLock() returned LockAttemptStatus.ConcurrentAttempt for lockId: {0}, threadId: {1}. Will sleep for {2} ms", lockId, threadId, shortSleep);
                             Thread.Sleep(shortSleep);
                             break;

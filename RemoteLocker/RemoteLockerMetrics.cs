@@ -18,6 +18,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             CassandraImplRelockOp = Context.Timer("CassandraImpl.Relock", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
             CassandraImplUnlockOp = Context.Timer("CassandraImpl.Unlock", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
             FreezeEvents = Context.Meter("FreezeEvents", Unit.Events, TimeUnit.Hours);
+            TryLockAttemptsPerRequest = Context.Histogram("TryLockAttemptsPerRequest", Unit.Events);
+            TryLockAttemptsRate = Context.Meter("TryLockAttemptsRate", Unit.Events);
         }
 
         public MetricsContext Context { get; private set; }
@@ -30,6 +32,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         public Timer CassandraImplRelockOp { get; private set; }
         public Timer CassandraImplUnlockOp { get; private set; }
         public Meter FreezeEvents { get; private set; }
+        public Histogram TryLockAttemptsPerRequest { get; private set; }
+        public Meter TryLockAttemptsRate { get; private set; }
     }
 
     public class RemoteLockerMetricsBenchTmp

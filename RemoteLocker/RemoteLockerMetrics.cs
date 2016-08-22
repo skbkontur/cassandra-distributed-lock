@@ -31,46 +31,4 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         public Timer CassandraImplUnlockOp { get; private set; }
         public Meter FreezeEvents { get; private set; }
     }
-
-    public class RemoteLockerMetricsBenchTmp
-    {
-        public RemoteLockerMetricsBenchTmp()
-        {
-            Context = Metric.Context("RemoteLocker").Context("BenchTmp");
-            TryGetLockMetadata1 = Context.Timer("TryGetLockMetadata1", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            ThreadAlive = Context.Timer("ThreadAlive", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            RunBattle = Context.Timer("RunBattle", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            TryGetLockMetadata2 = Context.Timer("TryGetLockMetadata2", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            WriteLockMetadata1 = Context.Timer("WriteLockMetadata1", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            WriteThread1 = Context.Timer("WriteThread1", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            WriteLockMetadata2 = Context.Timer("WriteLockMetadata2", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            WriteThread2 = Context.Timer("WriteThread2", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            SearchThreads1 = Context.Timer("SearchThreads1", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            SearchThreads2 = Context.Timer("SearchThreads2", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            WriteThread3 = Context.Timer("WriteThread3", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            WriteThread4 = Context.Timer("WriteThread4", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            SearchThreads3 = Context.Timer("SearchThreads3", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            SearchThreads4 = Context.Timer("SearchThreads4", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            DeleteThread1 = Context.Timer("DeleteThread1", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-            DeleteThread2 = Context.Timer("DeleteThread2", Unit.Calls, SamplingType.FavourRecent, TimeUnit.Minutes);
-        }
-
-        public MetricsContext Context { get; private set; }
-        public Timer TryGetLockMetadata1 { get; private set; }
-        public Timer ThreadAlive { get; private set; }
-        public Timer RunBattle { get; private set; }
-        public Timer TryGetLockMetadata2 { get; private set; }
-        public Timer WriteLockMetadata1 { get; private set; }
-        public Timer WriteThread1 { get; private set; }
-        public Timer WriteLockMetadata2 { get; private set; }
-        public Timer WriteThread2 { get; private set; }
-        public Timer SearchThreads1 { get; private set; }
-        public Timer SearchThreads2 { get; private set; }
-        public Timer WriteThread3 { get; private set; }
-        public Timer WriteThread4 { get; private set; }
-        public Timer SearchThreads3 { get; private set; }
-        public Timer SearchThreads4 { get; private set; }
-        public Timer DeleteThread1 { get; private set; }
-        public Timer DeleteThread2 { get; private set; }
-    }
 }

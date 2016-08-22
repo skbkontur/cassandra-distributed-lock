@@ -6,8 +6,6 @@ using JetBrains.Annotations;
 
 using log4net;
 
-using Metrics;
-
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
     public class RemoteLocker : IDisposable, IRemoteLockCreator

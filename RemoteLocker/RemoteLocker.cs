@@ -145,41 +145,31 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 return null;
             }
             var attempt = 1;
-            try
+            while(true)
             {
-                while (true)
+                LockAttemptResult lockAttempt;
+                using(metrics.CassandraImplTryLockOp.NewContext(FormatLockOperationId(lockId, threadId)))
+                    lockAttempt = remoteLockImplementation.TryLock(lockId, threadId);
+                switch(lockAttempt.Status)
                 {
-                    metrics.TryLockAttemptsRate.Mark();
-                    LockAttemptResult lockAttempt;
-                    using (metrics.CassandraImplTryLockOp.NewContext(FormatLockOperationId(lockId, threadId)))
-                        lockAttempt = remoteLockImplementation.TryLock(lockId, threadId);
-                    switch (lockAttempt.Status)
-                    {
-                        case LockAttemptStatus.Success:
-                            rivalThreadId = null;
-                            var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
-                            if (!remoteLocksById.TryAdd(lockId, remoteLockState))
-                                throw new InvalidOperationException(string.Format("RemoteLocker state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
-                            remoteLocksQueue.Add(remoteLockState);
-                            return new RemoteLockHandle(lockId, threadId, this);
-                        case LockAttemptStatus.AnotherThreadIsOwner:
-                            rivalThreadId = lockAttempt.OwnerId;
-                            return null;
-                        case LockAttemptStatus.ConcurrentAttempt:
-                            var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
-                            metrics.SleepTimeTotalMeter.Mark(shortSleep);
-                            metrics.SleepTimeRate.Update(shortSleep);
-                            logger.WarnFormat("remoteLockImplementation.TryLock() returned LockAttemptStatus.ConcurrentAttempt for lockId: {0}, threadId: {1}. Will sleep for {2} ms", lockId, threadId, shortSleep);
-                            Thread.Sleep(shortSleep);
-                            break;
-                        default:
-                            throw new InvalidOperationException(string.Format("Invalid LockAttemptStatus: {0}", lockAttempt.Status));
-                    }
+                case LockAttemptStatus.Success:
+                    rivalThreadId = null;
+                    var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
+                    if(!remoteLocksById.TryAdd(lockId, remoteLockState))
+                        throw new InvalidOperationException(string.Format("RemoteLocker state is corrupted. lockId: {0}, threaId: {1}, remoteLocksById[lockId]: {2}", lockId, threadId, remoteLockState));
+                    remoteLocksQueue.Add(remoteLockState);
+                    return new RemoteLockHandle(lockId, threadId, this);
+                case LockAttemptStatus.AnotherThreadIsOwner:
+                    rivalThreadId = lockAttempt.OwnerId;
+                    return null;
+                case LockAttemptStatus.ConcurrentAttempt:
+                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
+                    logger.WarnFormat("remoteLockImplementation.TryLock() returned LockAttemptStatus.ConcurrentAttempt for lockId: {0}, threadId: {1}. Will sleep for {2} ms", lockId, threadId, shortSleep);
+                    Thread.Sleep(shortSleep);
+                    break;
+                default:
+                    throw new InvalidOperationException(string.Format("Invalid LockAttemptStatus: {0}", lockAttempt.Status));
                 }
-            }
-            finally
-            {
-                metrics.TryLockAttemptsPerRequest.Update(attempt);
             }
         }
 

@@ -40,7 +40,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [NotNull]
         public static CassandraRemoteLockImplementationSettings Default([NotNull] ColumnFamilyFullName columnFamilyFullName)
         {
-            return new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), columnFamilyFullName, TimeSpan.FromMinutes(3), TimeSpan.FromDays(30), TimeSpan.FromSeconds(10), 1000);
+            return new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), columnFamilyFullName, TimeSpan.FromMinutes(3), TimeSpan.FromDays(7), TimeSpan.FromSeconds(10), 1000);
         }
     }
 }

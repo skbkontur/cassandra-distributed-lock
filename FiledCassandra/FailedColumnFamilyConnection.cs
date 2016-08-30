@@ -103,12 +103,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             MayBeFail();
         }
 
-        public List<KeyValuePair<string, Column[]>> GetRows(IEnumerable<string> keys, string startColumnName, int count)
-        {
-            MayBeFail();
-            return connection.GetRows(keys, startColumnName, count);
-        }
-
         public List<KeyValuePair<string, Column[]>> GetRegion(IEnumerable<string> keys, string startColumnName, string finishColumnName, int limitPerRow)
         {
             MayBeFail();
@@ -125,18 +119,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             MayBeFail();
             return connection.GetRows(keys, columnNames);
-        }
-
-        public string[] GetRowsWhere(string exclusiveStartKey, int count, IndexExpression[] conditions, string[] columns)
-        {
-            MayBeFail();
-            return connection.GetRowsWhere(exclusiveStartKey, count, conditions, columns);
-        }
-
-        public string[] GetRowsWithColumnValue(int maximalCount, string key, byte[] value)
-        {
-            MayBeFail();
-            return connection.GetRowsWithColumnValue(maximalCount, key, value);
         }
 
         public void Truncate()

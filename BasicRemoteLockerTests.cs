@@ -16,7 +16,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
+            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node));
             var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
@@ -84,7 +84,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(5),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts: 1, timeout: TimeSpan.FromSeconds(1)),
+                    CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, attempts: 1, timeout: TimeSpan.FromSeconds(1)),
                 };
             using(var tester = new RemoteLockerTester(config))
             {
@@ -111,7 +111,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(10),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                    CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
             using(var tester = new RemoteLockerTester(config))
             {

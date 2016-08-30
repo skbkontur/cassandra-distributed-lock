@@ -28,7 +28,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            var cassandraClusterSettings = StartSingleCassandraSetUp.Node.CreateSettings();
+            var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
             var initializerSettings = new CassandraInitializerSettings();
             var cassandraSchemeActualizer = new CassandraSchemeActualizer(new CassandraCluster(cassandraClusterSettings), new CassandraMetaProvider(), initializerSettings);
             cassandraSchemeActualizer.AddNewColumnFamilies();
@@ -41,7 +41,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             container = new Container(new ContainerConfiguration(assemblies));
             container.Configurator.ForAbstraction<ISerializer>().UseInstances(new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead));
             ConfigureContainer(container);
-            var cassandraClusterSettings = StartSingleCassandraSetUp.Node.CreateSettings();
+            var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
             container.Configurator.ForAbstraction<ICassandraClusterSettings>().UseInstances(cassandraClusterSettings);
             var settings = new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), ColumnFamilies.remoteLock, TimeSpan.FromMinutes(3), TimeSpan.FromDays(30), TimeSpan.FromSeconds(5), 10);
             var remoteLockImplementation = container.Create<CassandraRemoteLockImplementationSettings, CassandraRemoteLockImplementation>(settings);

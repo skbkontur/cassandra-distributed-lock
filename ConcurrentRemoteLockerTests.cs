@@ -21,7 +21,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node));
+            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node));
             cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
@@ -62,7 +62,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             KeepLockAliveInterval = TimeSpan.FromSeconds(1),
                             ChangeLockRowThreshold = 10,
                             TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, 1, TimeSpan.FromSeconds(1)),
                             CassandraFailProbability = null
                         },
                 });
@@ -90,7 +90,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             KeepLockAliveInterval = TimeSpan.Zero,
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = stochasticType,
-                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromSeconds(1)),
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, 1, TimeSpan.FromSeconds(1)),
                             CassandraFailProbability = null
                         },
                 });
@@ -118,7 +118,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             KeepLockAliveInterval = TimeSpan.FromMilliseconds(50),
                             ChangeLockRowThreshold = int.MaxValue,
                             TimestamProviderStochasticType = stochasticType,
-                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromMilliseconds(350)),
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, 1, TimeSpan.FromMilliseconds(350)),
                             CassandraFailProbability = null
                         },
                 });
@@ -145,7 +145,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                             KeepLockAliveInterval = TimeSpan.FromSeconds(1),
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                            CassandraClusterSettings = CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node, 1, TimeSpan.FromMilliseconds(350)),
+                            CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, 1, TimeSpan.FromMilliseconds(350)),
                             CassandraFailProbability = failProbability
                         },
                 });

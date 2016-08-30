@@ -27,7 +27,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(2),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = Settings.CassandraClusterSettings.ForNode(StartSingleCassandraSetUp.Node),
+                    CassandraClusterSettings = Settings.CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node),
                     CassandraFailProbability = null,
                 };
         }

@@ -72,7 +72,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         public void WriteLockMetadata([NotNull] NewLockMetadata newLockMetadata, long oldLockMetadataTimestamp)
         {
-            var newTimestamp = Math.Max(GetNowTicks(), oldLockMetadataTimestamp + 1);
+            var newTimestamp = Math.Max(GetNowTicks(), oldLockMetadataTimestamp + ticksPerMicrosecond);
             var columns = new List<Column>
                 {
                     new Column
@@ -140,7 +140,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             while(true)
             {
                 var last = Interlocked.Read(ref lastTicks);
-                var cur = Math.Max(ticks, last + 1);
+                var cur = Math.Max(ticks, last + ticksPerMicrosecond);
                 if(Interlocked.CompareExchange(ref lastTicks, cur, last) == last)
                     return cur;
             }
@@ -168,6 +168,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return columnName.StartsWith(threadIdWasThresholdedIndicator) ? columnName.Substring(thresholdedThreadTechnicalPrefixLength) : columnName;
         }
 
+        private const long ticksPerMicrosecond = 10;
         private const string threadIdWasThresholdedIndicator = "91075218575b4c14bc88ce8b00fe9946";
         private const string lockRowIdColumnName = "LockRowId";
         private const string lockCountColumnName = "LockCount";

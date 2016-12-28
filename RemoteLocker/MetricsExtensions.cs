@@ -12,7 +12,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             return new TimeMeasuringContext(timer, finalAction, userValue);
         }
 
-        private class TimeMeasuringContext : IDisposable
+        private struct TimeMeasuringContext : IDisposable
         {
             private readonly Timer timer;
             private readonly Action<TimeSpan> finalAction;

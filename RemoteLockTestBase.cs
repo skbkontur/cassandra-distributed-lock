@@ -8,17 +8,19 @@ using GroboContainer.Impl;
 using GroBuf;
 using GroBuf.DataMembersExtracters;
 
-using log4net;
-
 using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.Commons.Logging;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
+
+using Vostok.Logging;
+using Vostok.Logging.Extensions;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -30,7 +32,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
             var initializerSettings = new CassandraInitializerSettings();
-            var cassandraSchemeActualizer = new CassandraSchemeActualizer(new CassandraCluster(cassandraClusterSettings), new CassandraMetaProvider(), initializerSettings);
+            var cassandraSchemeActualizer = new CassandraSchemeActualizer(new CassandraCluster(cassandraClusterSettings, logger), new CassandraMetaProvider(), initializerSettings);
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 
@@ -47,7 +49,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var remoteLockImplementation = container.Create<CassandraRemoteLockImplementationSettings, CassandraRemoteLockImplementation>(settings);
             container.Configurator.ForAbstraction<IRemoteLockImplementation>().UseInstances(remoteLockImplementation);
 
-            logger.InfoFormat("Start SetUp, runningThreads = {0}", runningThreads);
+            logger.Info("Start SetUp, runningThreads = {0}", runningThreads);
             runningThreads = 0;
             isEnd = false;
             threads = new List<Thread>();
@@ -56,7 +58,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TearDown]
         public void TearDown()
         {
-            logger.InfoFormat("Start TeadDown, runningThreads = {0}", runningThreads);
+            logger.Info("Start TeadDown, runningThreads = {0}", runningThreads);
             foreach(var thread in threads ?? new List<Thread>())
                 thread.Abort();
         }
@@ -70,7 +72,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var seed = Guid.NewGuid().GetHashCode();
             var thread = new Thread(() => MakePeriodicAction(shortAction, seed, lockCreator));
             thread.Start();
-            logger.InfoFormat("Add thread with seed = {0}", seed);
+            logger.Info("Add thread with seed = {0}", seed);
             threads.Add(thread);
         }
 
@@ -86,14 +88,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
 
         protected void RunThreads(TimeSpan runningTimeInterval)
         {
-            logger.InfoFormat("RunThreads. begin, runningThreads = {0}", runningThreads);
+            logger.Info("RunThreads. begin, runningThreads = {0}", runningThreads);
             running.Set();
             Thread.Sleep(runningTimeInterval);
             running.Reset();
             while(Interlocked.CompareExchange(ref runningThreads, 0, 0) != 0)
             {
                 Thread.Sleep(50);
-                logger.InfoFormat("Wait runningThreads = 0. Now runningThreads = {0}", runningThreads);
+                logger.Info("Wait runningThreads = 0. Now runningThreads = {0}", runningThreads);
                 foreach(var thread in threads)
                 {
                     if(!thread.IsAlive)
@@ -128,14 +130,14 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             var remoteLockerMetrics = new RemoteLockerMetrics(null);
             if(localRivalOptimization == LocalRivalOptimization.Enabled)
             {
-                var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
+                var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics, logger);
                 for(var i = 0; i < threadCount; i++)
                     remoteLockCreators[i] = singleRemoteLocker;
             }
             else
             {
                 for(var i = 0; i < threadCount; i++)
-                    remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics);
+                    remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics, logger);
             }
             return remoteLockCreators;
         }
@@ -158,6 +160,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private int runningThreads;
         private List<Thread> threads;
         private readonly ManualResetEvent running = new ManualResetEvent(false);
-        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteLockTestBase));
+        private static readonly ILog logger = new Log4NetWrapper(typeof(RemoteLockTestBase));
     }
 }

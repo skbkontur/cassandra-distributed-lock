@@ -8,10 +8,13 @@ using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.Commons.Logging;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Helpers;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests.FiledCassandra;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
+
+using Vostok.Logging;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -21,7 +24,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node));
+            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node), logger);
             cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
@@ -278,5 +281,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             public TimeSpan? SyncInterval { get; set; }
             public RemoteLockerTesterConfig TesterConfig { get; set; }
         }
+        
+        private static readonly ILog logger = new Log4NetWrapper(typeof(ConcurrentRemoteLockerTests));
     }
 }

@@ -11,8 +11,11 @@ using Metrics.Reporters;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.Commons.Logging;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests.FiledCassandra;
+
+using Vostok.Logging;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -23,7 +26,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             config = config ?? RemoteLockerTesterConfig.Default();
             var localRivalOptimizationIsEnabled = config.LocalRivalOptimization != LocalRivalOptimization.Disabled;
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
-            ICassandraCluster cassandraCluster = new CassandraCluster(config.CassandraClusterSettings);
+            ICassandraCluster cassandraCluster = new CassandraCluster(config.CassandraClusterSettings, logger);
             if(config.CassandraFailProbability.HasValue)
                 cassandraCluster = new FailedCassandraCluster(cassandraCluster, config.CassandraFailProbability.Value);
             var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType, config.LockTtl);
@@ -33,17 +36,17 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             remoteLockerMetrics = new RemoteLockerMetrics("dummyKeyspace");
             if(localRivalOptimizationIsEnabled)
             {
-                var remoteLocker = new RemoteLocker(cassandraRemoteLockImplementation, remoteLockerMetrics);
+                var remoteLocker = new RemoteLocker(cassandraRemoteLockImplementation, remoteLockerMetrics, logger);
                 for(var i = 0; i < config.LockersCount; i++)
                     remoteLockers[i] = remoteLocker;
             }
             else
             {
                 for(var i = 0; i < config.LockersCount; i++)
-                    remoteLockers[i] = new RemoteLocker(new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings), remoteLockerMetrics);
+                    remoteLockers[i] = new RemoteLocker(new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings), remoteLockerMetrics, logger);
             }
             // it is important to use another CassandraCluster (with another setting of attempts, for example)
-            cassandraRemoteLockImplementationForCheckings = new CassandraRemoteLockImplementation(new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node)), serializer, implementationSettings);
+            cassandraRemoteLockImplementationForCheckings = new CassandraRemoteLockImplementation(new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node), logger), serializer, implementationSettings);
         }
 
         public void Dispose()
@@ -95,5 +98,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         private readonly RemoteLocker[] remoteLockers;
         private readonly RemoteLockerMetrics remoteLockerMetrics;
         private readonly CassandraRemoteLockImplementation cassandraRemoteLockImplementationForCheckings;
+        private static readonly ILog logger = new Log4NetWrapper(typeof(RemoteLockerTester));
     }
 }

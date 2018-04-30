@@ -191,7 +191,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     using(metrics.CassandraImplUnlockOp.NewContext(remoteLockState.ToString()))
                     {
                         if(!remoteLockImplementation.TryUnlock(remoteLockState.LockId, remoteLockState.ThreadId))
-                            logger.Error(string.Format("Cannot unlock. Possible lock metadata corruption for: {0}", remoteLockState));
+                            logger.Error("Cannot unlock. Possible lock metadata corruption for: {0}", remoteLockState);
                     }
                 }
                 catch(Exception e)
@@ -266,7 +266,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     {
                         var relocked = remoteLockImplementation.TryRelock(remoteLockState.LockId, remoteLockState.ThreadId);
                         if(!relocked)
-                            logger.Error(string.Format("Cannot relock. Possible lock metadata corruption for: {0}", remoteLockState));
+                            logger.Error("Cannot relock. Possible lock metadata corruption for: {0}", remoteLockState);
                         return relocked;
                     }
                 }

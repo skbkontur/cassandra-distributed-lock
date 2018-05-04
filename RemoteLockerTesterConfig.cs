@@ -1,6 +1,7 @@
 using System;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
+using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
 {
@@ -27,7 +28,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(2),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = Settings.CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node),
+                    CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(),
                     CassandraFailProbability = null,
                 };
         }

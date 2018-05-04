@@ -11,7 +11,6 @@ using GroBuf.DataMembersExtracters;
 using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
-using SKBKontur.Cassandra.ClusterDeployment;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 using SKBKontur.Catalogue.CassandraPrimitives.Tests.Commons.Logging;
@@ -153,7 +152,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         {
             //проверяем, что после всего мы в какой-то момент сможем-таки взять лок
             foreach(var remoteLockCreator in remoteLockCreators)
+            {
+#pragma warning disable 618
                 Assert.That(!((RemoteLocker)remoteLockCreator).CheckLockIsAcquiredLocally(lockId), "После остановки всех потоков осталась локальная блокировка");
+#pragma warning restore 618
+            }
         }
 
         protected Container container;

@@ -19,7 +19,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            var cassandraCluster = new CassandraCluster(CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node), logger);
+            var cassandraCluster = new CassandraCluster(SingleCassandraNodeSetUpFixture.Node.CreateSettings(), logger);
             var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
@@ -87,7 +87,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(5),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, attempts: 1, timeout: TimeSpan.FromSeconds(1)),
+                    CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
             using(var tester = new RemoteLockerTester(config))
             {
@@ -114,7 +114,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                     KeepLockAliveInterval = TimeSpan.FromSeconds(10),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = CassandraClusterSettings.ForNode(SingleCassandraNodeSetUpFixture.Node, attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                    CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
             using(var tester = new RemoteLockerTester(config))
             {
@@ -129,7 +129,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
                 lock1.Dispose();
             }
         }
-        
+
         private static readonly ILog logger = new Log4NetWrapper(typeof(BasicRemoteLockerTests));
     }
 }

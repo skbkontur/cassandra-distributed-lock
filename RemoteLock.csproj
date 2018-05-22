@@ -50,7 +50,7 @@
       <HintPath>..\..\packages\Mono.Reflection.1.1.0.0\lib\Mono.Reflection.dll</HintPath>
     </Reference>
     <Reference Include="SkbKontur.Cassandra.ThriftClient, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\SkbKontur.Cassandra.ThriftClient.2.0.0-rc2\lib\net471\SkbKontur.Cassandra.ThriftClient.dll</HintPath>
+      <HintPath>..\..\packages\SkbKontur.Cassandra.ThriftClient.2.0.0-rc5\lib\net471\SkbKontur.Cassandra.ThriftClient.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration">

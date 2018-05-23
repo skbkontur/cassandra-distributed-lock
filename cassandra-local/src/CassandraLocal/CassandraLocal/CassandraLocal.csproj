@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net471</TargetFramework>
+    <AssemblyName>SkbKontur.Cassandra.Local</AssemblyName>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
+    <PackageId>$(AssemblyName)</PackageId>
+    <VersionPrefix>1.0.10</VersionPrefix>
+    <Version>$(VersionPrefix)</Version>
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <Authors>SKB Kontur</Authors>
+    <PackageTags>cassandra windows</PackageTags>
+    <Description>Automation tools for running Apache Cassandra on Windows</Description>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/skbkontur/cassandra-local</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Management" />
+  </ItemGroup>
+
+</Project>

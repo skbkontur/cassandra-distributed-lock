@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 
 using Cassandra.DistributedLock.Tests.Logging;
 
@@ -7,7 +8,9 @@ using NUnit.Framework;
 
 using SkbKontur.Cassandra.Local;
 
+using SKBKontur.Cassandra.CassandraClient.Abstractions;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
+using SKBKontur.Cassandra.CassandraClient.Scheme;
 
 namespace Cassandra.DistributedLock.Tests
 {
@@ -20,25 +23,57 @@ namespace Cassandra.DistributedLock.Tests
             Log4NetConfiguration.InitializeOnce();
             var templateDirectory = Path.Combine(FindCassandraTemplateDirectory(AppDomain.CurrentDomain.BaseDirectory), @"v3.11.x");
             var deployDirectory = Path.Combine(Path.GetTempPath(), "deployed_cassandra_v3.11.x");
-            Node = new LocalCassandraNode(templateDirectory, deployDirectory)
+            node = new LocalCassandraNode(templateDirectory, deployDirectory)
                 {
                     RpcPort = 9360,
                     CqlPort = 9343,
                     JmxPort = 7399,
                     GossipPort = 7400,
                 };
-            Node.Restart();
-            /*var cassandraCluster = new CassandraCluster(Node.CreateSettings(), new Log4NetWrapper(typeof(SingleCassandraNodeSetUpFixture)));
-            new CassandraSchemeActualizer(cassandraCluster).AddNewColumnFamilies();*/
+            node.Restart();
+
+            cassandraCluster = new CassandraCluster(CreateCassandraClusterSettings(), new Log4NetWrapper(typeof(SingleCassandraNodeSetUpFixture)));
+            cassandraCluster.ActualizeKeyspaces(new[]
+                {
+                    new KeyspaceScheme
+                        {
+                            Name = RemoteLockKeyspace,
+                            Configuration = new KeyspaceConfiguration
+                                {
+                                    ReplicationStrategy = SimpleReplicationStrategy.Create(replicationFactor : 1),
+                                    ColumnFamilies = new[]
+                                        {
+                                            new ColumnFamily
+                                                {
+                                                    Name = RemoteLockColumnFamily,
+                                                    Caching = ColumnFamilyCaching.KeysOnly
+                                                }
+                                        }
+                                }
+                        }
+                });
         }
 
         [OneTimeTearDown]
         public static void TearDown()
         {
-            Node.Stop();
+            node.Stop();
         }
 
-        internal static LocalCassandraNode Node { get; private set; }
+        public static ICassandraClusterSettings CreateCassandraClusterSettings(int attempts = 5, TimeSpan? timeout = null)
+        {
+            return new SingleNodeCassandraClusterSettings(new IPEndPoint(IPAddress.Parse(node.RpcAddress), node.RpcPort))
+                {
+                    ClusterName = node.ClusterName,
+                    Attempts = attempts,
+                    Timeout = (int)(timeout ?? TimeSpan.FromSeconds(6)).TotalMilliseconds,
+                };
+        }
+
+        public static void TruncateAllColumnFamilies()
+        {
+            cassandraCluster.RetrieveColumnFamilyConnection(RemoteLockKeyspace, RemoteLockColumnFamily).Truncate();
+        }
 
         private static string FindCassandraTemplateDirectory(string currentDir)
         {
@@ -48,6 +83,12 @@ namespace Cassandra.DistributedLock.Tests
             return Directory.Exists(cassandraTemplateDirectory) ? cassandraTemplateDirectory : FindCassandraTemplateDirectory(Path.GetDirectoryName(currentDir));
         }
 
+        public const string RemoteLockKeyspace = "TestRemoteLockKeyspace";
+        public const string RemoteLockColumnFamily = "TestRemoteLockCf";
+
         private const string cassandraTemplates = @"cassandra-local\cassandra";
+
+        private static LocalCassandraNode node;
+        private static CassandraCluster cassandraCluster;
     }
 }

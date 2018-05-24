@@ -27,7 +27,7 @@ namespace Cassandra.DistributedLock.Tests
                     KeepLockAliveInterval = TimeSpan.FromSeconds(2),
                     ChangeLockRowThreshold = 10,
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                    CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(),
+                    CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(),
                     CassandraFailProbability = null,
                 };
         }

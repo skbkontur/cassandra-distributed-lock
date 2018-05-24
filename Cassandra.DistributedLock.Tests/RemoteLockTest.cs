@@ -18,27 +18,20 @@ using Vostok.Logging.Extensions;
 
 namespace Cassandra.DistributedLock.Tests
 {
-    [TestFixture]
     public class RemoteLockTest
     {
         [OneTimeSetUp]
-        public void TestFixtureSetUp()
+        public void OneTimeSetUp()
         {
-            var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
-            var cassandraCluster = new CassandraCluster(cassandraClusterSettings, logger);
-            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster);
-            cassandraSchemeActualizer.AddNewColumnFamilies();
+            var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
+            var cassandraCluster = new CassandraCluster(SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(), logger);
+            var settings = new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), SingleCassandraNodeSetUpFixture.RemoteLockKeyspace, SingleCassandraNodeSetUpFixture.RemoteLockColumnFamily, TimeSpan.FromMinutes(3), TimeSpan.FromDays(30), TimeSpan.FromSeconds(5), 10);
+            remoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, settings);
         }
 
         [SetUp]
         public void SetUp()
         {
-            var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
-            var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
-            var cassandraCluster = new CassandraCluster(cassandraClusterSettings, logger);
-            var settings = new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), TestConsts.RemoteLockKeyspace, TestConsts.RemoteLockColumnFamily, TimeSpan.FromMinutes(3), TimeSpan.FromDays(30), TimeSpan.FromSeconds(5), 10);
-            remoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, settings);
-
             logger.Info("Start SetUp, runningThreads = {0}", runningThreads);
             runningThreads = 0;
             isEnd = false;

@@ -30,7 +30,7 @@ namespace Cassandra.DistributedLock.Tests
             if(config.CassandraFailProbability.HasValue)
                 cassandraCluster = new FailedCassandraCluster(cassandraCluster, config.CassandraFailProbability.Value);
             var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType, config.LockTtl);
-            var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, TestConsts.RemoteLockKeyspace, TestConsts.RemoteLockColumnFamily, config.LockTtl, config.LockMetadataTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
+            var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, SingleCassandraNodeSetUpFixture.RemoteLockKeyspace, SingleCassandraNodeSetUpFixture.RemoteLockColumnFamily, config.LockTtl, config.LockMetadataTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
             var cassandraRemoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings);
             remoteLockers = new RemoteLocker[config.LockersCount];
             remoteLockerMetrics = new RemoteLockerMetrics("dummyKeyspace");
@@ -46,7 +46,7 @@ namespace Cassandra.DistributedLock.Tests
                     remoteLockers[i] = new RemoteLocker(new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings), remoteLockerMetrics, logger);
             }
             // it is important to use another CassandraCluster (with another setting of attempts, for example)
-            cassandraRemoteLockImplementationForCheckings = new CassandraRemoteLockImplementation(new CassandraCluster(SingleCassandraNodeSetUpFixture.Node.CreateSettings(), logger), serializer, implementationSettings);
+            cassandraRemoteLockImplementationForCheckings = new CassandraRemoteLockImplementation(new CassandraCluster(SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(), logger), serializer, implementationSettings);
         }
 
         public void Dispose()
@@ -68,7 +68,7 @@ namespace Cassandra.DistributedLock.Tests
             Console.Out.WriteLine(metricsReport);
         }
 
-        public IRemoteLockCreator this[int index] { get { return remoteLockers[index]; } }
+        public IRemoteLockCreator this[int index] => remoteLockers[index];
 
         public IRemoteLock Lock(string lockId)
         {

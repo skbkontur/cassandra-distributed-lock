@@ -5,32 +5,19 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cassandra.DistributedLock.Tests.FailedCassandra;
-using Cassandra.DistributedLock.Tests.Logging;
 
 using NUnit.Framework;
 
-using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-
-using Vostok.Logging;
 
 namespace Cassandra.DistributedLock.Tests
 {
-    [TestFixture]
     public class ConcurrentRemoteLockerTests
     {
-        [OneTimeSetUp]
-        public void TestFixtureSetUp()
-        {
-            var cassandraCluster = new CassandraCluster(SingleCassandraNodeSetUpFixture.Node.CreateSettings(), logger);
-            cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster);
-            cassandraSchemeActualizer.AddNewColumnFamilies();
-        }
-
         [SetUp]
         public void SetUp()
         {
-            cassandraSchemeActualizer.TruncateAllColumnFamilies();
+            SingleCassandraNodeSetUpFixture.TruncateAllColumnFamilies();
         }
 
         [TestCase(1, 1, 500, 0.01d, LocalRivalOptimization.Disabled, null)]
@@ -63,7 +50,7 @@ namespace Cassandra.DistributedLock.Tests
                             KeepLockAliveInterval = TimeSpan.FromSeconds(1),
                             ChangeLockRowThreshold = 10,
                             TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                             CassandraFailProbability = null
                         },
                 });
@@ -91,7 +78,7 @@ namespace Cassandra.DistributedLock.Tests
                             KeepLockAliveInterval = TimeSpan.Zero,
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = stochasticType,
-                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
+                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                             CassandraFailProbability = null
                         },
                 });
@@ -119,7 +106,7 @@ namespace Cassandra.DistributedLock.Tests
                             KeepLockAliveInterval = TimeSpan.FromMilliseconds(50),
                             ChangeLockRowThreshold = int.MaxValue,
                             TimestamProviderStochasticType = stochasticType,
-                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(attempts : 1, timeout : TimeSpan.FromMilliseconds(350)),
+                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromMilliseconds(350)),
                             CassandraFailProbability = null
                         },
                 });
@@ -146,7 +133,7 @@ namespace Cassandra.DistributedLock.Tests
                             KeepLockAliveInterval = TimeSpan.FromSeconds(1),
                             ChangeLockRowThreshold = 2,
                             TimestamProviderStochasticType = TimestampProviderStochasticType.None,
-                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings(attempts : 1, timeout : TimeSpan.FromMilliseconds(350)),
+                            CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromMilliseconds(350)),
                             CassandraFailProbability = failProbability
                         },
                 });
@@ -248,8 +235,7 @@ namespace Cassandra.DistributedLock.Tests
                 }
                 MultithreadingTestHelper.RunOnSeparateThreads(TimeSpan.FromMinutes(30), actions);
                 stopSignal.Set();
-                if(syncerThread != null)
-                    syncerThread.Wait();
+                syncerThread?.Wait();
                 Assert.That(opsCounters.Sum(x => x.Value), Is.EqualTo(cfg.TesterConfig.LockersCount * cfg.OperationsPerThread));
             }
         }
@@ -261,14 +247,11 @@ namespace Cassandra.DistributedLock.Tests
                 if(state.ErrorOccurred)
                     return null;
                 syncSignal.WaitOne();
-                IRemoteLock remoteLock;
-                if(remoteLockCreator.TryGetLock(lockId, out remoteLock))
+                if(remoteLockCreator.TryGetLock(lockId, out var remoteLock))
                     return remoteLock;
                 Thread.Sleep(rng.Next(32));
             }
         }
-
-        private CassandraSchemeActualizer cassandraSchemeActualizer;
 
         private class TestConfig
         {
@@ -279,7 +262,5 @@ namespace Cassandra.DistributedLock.Tests
             public TimeSpan? SyncInterval { get; set; }
             public RemoteLockerTesterConfig TesterConfig { get; set; }
         }
-        
-        private static readonly ILog logger = new Log4NetWrapper(typeof(ConcurrentRemoteLockerTests));
     }
 }

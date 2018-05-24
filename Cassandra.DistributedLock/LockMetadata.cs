@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using JetBrains.Annotations;
 
@@ -17,12 +17,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         }
 
         [NotNull]
-        public string LockId { get; private set; }
+        public string LockId { get; }
 
         [NotNull]
-        public string LockRowId { get; private set; }
+        public string LockRowId { get; }
 
-        public int LockCount { get; private set; }
+        public int LockCount { get; }
 
         /// <summary>
         ///     This is optimization property for repeating locks (locks that used several times).
@@ -35,12 +35,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         ///     And so we can avoid scanning all the row and scan only columns >= {threshold} thereby decreasing the number of processed old SSTables and tombstones
         ///     during get_slice request.
         /// </summary>
-        public long? PreviousThreshold { get; private set; }
+        public long? PreviousThreshold { get; }
 
         public long GetPreviousThreshold()
         {
             if(!PreviousThreshold.HasValue)
-                throw new InvalidOperationException(string.Format("PreviousThreshold is not set for: {0}", this));
+                throw new InvalidOperationException($"PreviousThreshold is not set for: {this}");
             return PreviousThreshold.Value;
         }
 
@@ -51,14 +51,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         ///     But we can just check is it true that ProbableOwnerThreadId still owns lock and avoid get_slice in many cases.
         /// </summary>
         [CanBeNull]
-        public string ProbableOwnerThreadId { get; private set; }
+        public string ProbableOwnerThreadId { get; }
 
-        public long Timestamp { get; private set; }
+        public long Timestamp { get; }
 
         public override string ToString()
         {
-            return string.Format("LockId: {0}, LockRowId: {1}, LockCount: {2}, PreviousThreshold: {3}, ProbableOwnerThreadId: {4}, timestamp: {5}",
-                                 LockId, LockRowId, LockCount, PreviousThreshold, ProbableOwnerThreadId, Timestamp);
+            return $"LockId: {LockId}, LockRowId: {LockRowId}, LockCount: {LockCount}, PreviousThreshold: {PreviousThreshold}, ProbableOwnerThreadId: {ProbableOwnerThreadId}, timestamp: {Timestamp}";
         }
     }
 }

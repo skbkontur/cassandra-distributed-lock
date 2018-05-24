@@ -1,4 +1,4 @@
-﻿namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
+namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
     public class RemoteLockHandle : IRemoteLock
     {
@@ -14,8 +14,8 @@
             remoteLocker.ReleaseLock(LockId, ThreadId);
         }
 
-        public string LockId { get; private set; }
-        public string ThreadId { get; private set; }
+        public string LockId { get; }
+        public string ThreadId { get; }
 
         private readonly RemoteLocker remoteLocker;
     }

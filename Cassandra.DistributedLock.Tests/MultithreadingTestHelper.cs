@@ -25,7 +25,7 @@ namespace Cassandra.DistributedLock.Tests
                 })
                 {
                     IsBackground = true,
-                    Name = string.Format("test-{0}", threadId),
+                    Name = $"test-{threadId}",
                 };
         }
 
@@ -51,7 +51,7 @@ namespace Cassandra.DistributedLock.Tests
                 this.exceptions = exceptions;
             }
 
-            public bool ErrorOccurred { get { return exceptions.Any(); } }
+            public bool ErrorOccurred => exceptions.Any();
             private readonly ConcurrentBag<Exception> exceptions;
         }
     }

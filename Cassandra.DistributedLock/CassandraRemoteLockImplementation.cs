@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 
 using GroBuf;
@@ -14,13 +14,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
         {
             lockTtl = settings.LockTtl;
-            keepLockAliveInterval = settings.KeepLockAliveInterval;
+            KeepLockAliveInterval = settings.KeepLockAliveInterval;
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
             timestampProvider = settings.TimestampProvider;
             baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings);
         }
 
-        public TimeSpan KeepLockAliveInterval { get { return keepLockAliveInterval; } }
+        public TimeSpan KeepLockAliveInterval { get; }
 
         [NotNull]
         public LockAttemptResult TryLock([NotNull] string lockId, [NotNull] string threadId)
@@ -33,7 +33,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             if(!string.IsNullOrEmpty(probableOwnerThreadId) && baseOperationsPerformer.ThreadAlive(lockMetadata.LockRowId, lockMetadata.PreviousThreshold, probableOwnerThreadId))
             {
                 if(probableOwnerThreadId == threadId)
-                    throw new InvalidOperationException(string.Format("TryLock(lockId = {0}, threadId = {1}): probableOwnerThreadId == threadId, though it seemed to be impossible!", lockId, threadId));
+                    throw new InvalidOperationException($"TryLock(lockId = {lockId}, threadId = {threadId}): probableOwnerThreadId == threadId, though it seemed to be impossible!");
                 result = LockAttemptResult.AnotherOwner(probableOwnerThreadId);
             }
             else
@@ -131,7 +131,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         {
             var lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId);
             if(lockMetadata == null)
-                throw new InvalidOperationException(string.Format("Not found metadata for lockId = {0}", lockId));
+                throw new InvalidOperationException($"Not found metadata for lockId = {lockId}");
             return lockMetadata;
         }
 
@@ -141,7 +141,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         }
 
         private readonly TimeSpan lockTtl;
-        private readonly TimeSpan keepLockAliveInterval;
         private readonly int changeLockRowThreshold;
         private readonly ITimestampProvider timestampProvider;
         private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;

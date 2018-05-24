@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
@@ -14,20 +14,21 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         }
 
         [NotNull]
-        public string LockId { get; private set; }
+        public string LockId { get; }
 
         [NotNull]
-        public string LockRowId { get; private set; }
+        public string LockRowId { get; }
 
-        public int LockCount { get; private set; }
-        public long Threshold { get; private set; }
+        public int LockCount { get; }
+
+        public long Threshold { get; }
 
         [NotNull]
-        public string OwnerThreadId { get; private set; }
+        public string OwnerThreadId { get; }
 
         public override string ToString()
         {
-            return string.Format("LockId: {0}, LockRowId: {1}, LockCount: {2}, Threshold: {3}, OwnerThreadId: {4}", LockId, LockRowId, LockCount, Threshold, OwnerThreadId);
+            return $"LockId: {LockId}, LockRowId: {LockRowId}, LockCount: {LockCount}, Threshold: {Threshold}, OwnerThreadId: {OwnerThreadId}";
         }
     }
 }

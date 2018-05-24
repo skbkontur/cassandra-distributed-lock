@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
@@ -28,9 +28,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             return new LockAttemptResult(LockAttemptStatus.ConcurrentAttempt, null);
         }
 
-        public LockAttemptStatus Status { get; private set; }
+        public LockAttemptStatus Status { get; }
 
         [CanBeNull]
-        public string OwnerId { get; private set; }
+        public string OwnerId { get; }
     }
 }

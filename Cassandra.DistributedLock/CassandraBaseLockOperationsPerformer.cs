@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 
@@ -51,8 +52,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             var columnName = TransformThreadIdToColumnName(threshold, threadId);
             MakeInConnection(connection =>
                 {
-                    Column threadColumn;
-                    exists = connection.TryGetColumn(lockRowId, columnName, out threadColumn);
+                    exists = connection.TryGetColumn(lockRowId, columnName, out _);
                 });
             return exists;
         }
@@ -109,6 +109,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         }
 
         [CanBeNull]
+        [SuppressMessage("ReSharper", "PossibleInvalidOperationException")]
         public LockMetadata TryGetLockMetadata([NotNull] string lockId)
         {
             Column[] columns = null;
@@ -150,7 +151,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private static string TransformThreadIdToColumnName(long? threshold, [NotNull] string threadId)
         {
             if(string.IsNullOrEmpty(threadId))
-                throw new ArgumentException("Empty ThreadId is not supported", "threadId");
+                throw new ArgumentException("Empty ThreadId is not supported", nameof(threadId));
             return threshold == null ?
                        threadId :
                        ThresholdToString(threshold) + ':' + threadId;

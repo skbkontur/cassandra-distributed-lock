@@ -31,7 +31,7 @@ namespace Cassandra.DistributedLock.Tests
             return DateTime.UtcNow.Ticks + diff;
         }
 
-        private static Random Rng { get { return random ?? (random = new Random(Guid.NewGuid().GetHashCode())); } }
+        private static Random Rng => random ?? (random = new Random(Guid.NewGuid().GetHashCode()));
 
         [ThreadStatic]
         private static Random random;

@@ -25,13 +25,13 @@ namespace Cassandra.DistributedLock.Tests
         [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Disabled, null)]
         [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Enabled, null)]
         [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Disabled, null)]
-        [TestCase(10, 5, 500, 0.09d, LocalRivalOptimization.Disabled, null)]
-        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Enabled, null)]
-        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Disabled, null)]
-        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled, null)]
-        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled, 10)]
-        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Enabled, null)]
-        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(10, 5, 500, 0.09d, LocalRivalOptimization.Disabled, null), Category("LongRunning")]
+        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Enabled, null), Category("LongRunning")]
+        [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Disabled, null), Category("LongRunning")]
+        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled, null), Category("LongRunning")]
+        [TestCase(1, 10, 1000, 0.005d, LocalRivalOptimization.Disabled, 10), Category("LongRunning")]
+        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Enabled, null), Category("LongRunning")]
+        [TestCase(1, 5, 100, 0.3d, LocalRivalOptimization.Disabled, null), Category("LongRunning")]
         public void Normal(int locks, int threads, int operationsPerThread, double longRunningOpProbability, LocalRivalOptimization localRivalOptimization, int? syncIntervalInSeconds)
         {
             DoTest(new TestConfig

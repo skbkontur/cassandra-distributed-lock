@@ -11,4 +11,4 @@ build_script:
   - cmd: dotnet build --configuration Release ./Cassandra.DistributedLock.sln
 
 test_script:
-  - cmd: dotnet test --no-build --verbosity normal --configuration Release ./Cassandra.DistributedLock.Tests/Cassandra.DistributedLock.Tests.csproj
+  - cmd: dotnet test --no-build --verbosity normal --configuration Release --filter TestCategory!=LongRunning ./Cassandra.DistributedLock.Tests/Cassandra.DistributedLock.Tests.csproj

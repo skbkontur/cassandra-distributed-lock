@@ -1,4 +1,4 @@
-namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
+namespace Cassandra.DistributedLock.Tests
 {
     public enum TimestampProviderStochasticType
     {

@@ -2,6 +2,9 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Cassandra.DistributedLock.Tests.FailedCassandra;
+using Cassandra.DistributedLock.Tests.Logging;
+
 using GroBuf;
 using GroBuf.DataMembersExtracters;
 
@@ -11,13 +14,10 @@ using Metrics.Reporters;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.Commons.Logging;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests.FiledCassandra;
 
 using Vostok.Logging;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
+namespace Cassandra.DistributedLock.Tests
 {
     public class RemoteLockerTester : IDisposable, IRemoteLockCreator
     {
@@ -30,7 +30,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             if(config.CassandraFailProbability.HasValue)
                 cassandraCluster = new FailedCassandraCluster(cassandraCluster, config.CassandraFailProbability.Value);
             var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType, config.LockTtl);
-            var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, ColumnFamilies.remoteLock, config.LockTtl, config.LockMetadataTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
+            var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, TestConsts.RemoteLockKeyspace, TestConsts.RemoteLockColumnFamily, config.LockTtl, config.LockMetadataTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
             var cassandraRemoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings);
             remoteLockers = new RemoteLocker[config.LockersCount];
             remoteLockerMetrics = new RemoteLockerMetrics("dummyKeyspace");

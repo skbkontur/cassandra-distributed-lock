@@ -1,21 +1,56 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Threading;
 
-using log4net;
+using Cassandra.DistributedLock.Tests.Logging;
+
+using GroBuf;
+using GroBuf.DataMembersExtracters;
 
 using NUnit.Framework;
 
+using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
+using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
+using Vostok.Logging;
+using Vostok.Logging.Extensions;
+
+namespace Cassandra.DistributedLock.Tests
 {
-    public class RemoteLockTest : RemoteLockTestBase
+    [TestFixture]
+    public class RemoteLockTest
     {
-        public override void SetUp()
+        [OneTimeSetUp]
+        public void TestFixtureSetUp()
         {
-            base.SetUp();
-            logger = LogManager.GetLogger(typeof(RemoteLockTest));
-            remoteLockImplementation = (CassandraRemoteLockImplementation)container.Get<IRemoteLockImplementation>();
+            var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
+            var cassandraCluster = new CassandraCluster(cassandraClusterSettings, logger);
+            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster);
+            cassandraSchemeActualizer.AddNewColumnFamilies();
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
+            var cassandraClusterSettings = SingleCassandraNodeSetUpFixture.Node.CreateSettings();
+            var cassandraCluster = new CassandraCluster(cassandraClusterSettings, logger);
+            var settings = new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), TestConsts.RemoteLockKeyspace, TestConsts.RemoteLockColumnFamily, TimeSpan.FromMinutes(3), TimeSpan.FromDays(30), TimeSpan.FromSeconds(5), 10);
+            remoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, settings);
+
+            logger.Info("Start SetUp, runningThreads = {0}", runningThreads);
+            runningThreads = 0;
+            isEnd = false;
+            threads = new List<Thread>();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            logger.Info("Start TeadDown, runningThreads = {0}", runningThreads);
+            foreach(var thread in threads ?? new List<Thread>())
+                thread.Abort();
         }
 
         [TestCase(LocalRivalOptimization.Disabled)]
@@ -92,9 +127,94 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.Re
             }
         }
 
+        private void AddThread(Action<IRemoteLockCreator, Random> shortAction, IRemoteLockCreator lockCreator)
+        {
+            var seed = Guid.NewGuid().GetHashCode();
+            var thread = new Thread(() => MakePeriodicAction(shortAction, seed, lockCreator));
+            thread.Start();
+            logger.Info("Add thread with seed = {0}", seed);
+            threads.Add(thread);
+        }
+
+        private void JoinThreads()
+        {
+            logger.Info("JoinThreads. begin");
+            isEnd = true;
+            running.Set();
+            foreach(var thread in threads)
+                Assert.That(thread.Join(TimeSpan.FromSeconds(180)), "Не удалось остановить поток");
+            logger.Info("JoinThreads. end");
+        }
+
+        private void RunThreads(TimeSpan runningTimeInterval)
+        {
+            logger.Info("RunThreads. begin, runningThreads = {0}", runningThreads);
+            running.Set();
+            Thread.Sleep(runningTimeInterval);
+            running.Reset();
+            while(Interlocked.CompareExchange(ref runningThreads, 0, 0) != 0)
+            {
+                Thread.Sleep(50);
+                logger.Info("Wait runningThreads = 0. Now runningThreads = {0}", runningThreads);
+                foreach(var thread in threads)
+                {
+                    if(!thread.IsAlive)
+                        throw new Exception("Поток сдох");
+                }
+            }
+            logger.Info("RunThreads. end");
+        }
+
+        private void MakePeriodicAction(Action<IRemoteLockCreator, Random> shortAction, int seed, IRemoteLockCreator lockCreator)
+        {
+            try
+            {
+                var localRandom = new Random(seed);
+                while(!isEnd)
+                {
+                    running.WaitOne();
+                    Interlocked.Increment(ref runningThreads);
+                    shortAction(lockCreator, localRandom);
+                    Interlocked.Decrement(ref runningThreads);
+                }
+            }
+            catch(Exception e)
+            {
+                logger.Error(e);
+            }
+        }
+
+        private static IRemoteLockCreator[] PrepareRemoteLockCreators(int threadCount, LocalRivalOptimization localRivalOptimization, CassandraRemoteLockImplementation remoteLockImplementation)
+        {
+            var remoteLockCreators = new IRemoteLockCreator[threadCount];
+            var remoteLockerMetrics = new RemoteLockerMetrics(null);
+            if(localRivalOptimization == LocalRivalOptimization.Enabled)
+            {
+                var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics, logger);
+                for(var i = 0; i < threadCount; i++)
+                    remoteLockCreators[i] = singleRemoteLocker;
+            }
+            else
+            {
+                for(var i = 0; i < threadCount; i++)
+                    remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics, logger);
+            }
+            return remoteLockCreators;
+        }
+
+        private static void DisposeRemoteLockCreators(IRemoteLockCreator[] remoteLockCreators)
+        {
+            foreach(var remoteLockCreator in remoteLockCreators)
+                ((RemoteLocker)remoteLockCreator).Dispose();
+        }
+
         private const string lockId = "IncDecLock";
         private int x;
-        private ILog logger;
         private CassandraRemoteLockImplementation remoteLockImplementation;
+        private volatile bool isEnd;
+        private int runningThreads;
+        private List<Thread> threads;
+        private readonly ManualResetEvent running = new ManualResetEvent(false);
+        private static readonly ILog logger = new Log4NetWrapper(typeof(RemoteLockTest));
     }
 }

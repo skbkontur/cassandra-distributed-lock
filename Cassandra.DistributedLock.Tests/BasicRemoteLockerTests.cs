@@ -1,26 +1,25 @@
-﻿using System;
+using System;
 using System.Threading;
+
+using Cassandra.DistributedLock.Tests.Logging;
 
 using NUnit.Framework;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.Commons.Logging;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.SchemeActualizer;
 
 using Vostok.Logging;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
+namespace Cassandra.DistributedLock.Tests
 {
     [TestFixture]
     public class BasicRemoteLockerTests
     {
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             var cassandraCluster = new CassandraCluster(SingleCassandraNodeSetUpFixture.Node.CreateSettings(), logger);
-            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster, new CassandraMetaProvider(), new CassandraInitializerSettings());
+            var cassandraSchemeActualizer = new CassandraSchemeActualizer(cassandraCluster);
             cassandraSchemeActualizer.AddNewColumnFamilies();
         }
 

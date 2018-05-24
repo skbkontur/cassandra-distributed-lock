@@ -1,9 +1,8 @@
 using System;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
-using SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Settings;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
+namespace Cassandra.DistributedLock.Tests
 {
     public class RemoteLockerTesterConfig
     {

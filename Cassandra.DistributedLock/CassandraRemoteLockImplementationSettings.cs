@@ -2,45 +2,48 @@ using System;
 
 using JetBrains.Annotations;
 
-using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
-
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class CassandraRemoteLockImplementationSettings
     {
         public CassandraRemoteLockImplementationSettings(
             [NotNull] ITimestampProvider timestampProvider,
-            [NotNull] ColumnFamilyFullName columnFamilyFullName,
+            [NotNull] string keyspaceName,
+            [NotNull] string columnFamilyName,
             TimeSpan lockTtl,
             TimeSpan lockMetadataTtl,
             TimeSpan keepLockAliveInterval,
             int changeLockRowThreshold)
         {
             TimestampProvider = timestampProvider;
-            ColumnFamilyFullName = columnFamilyFullName;
+            KeyspaceName = keyspaceName;
+            ColumnFamilyName = columnFamilyName;
             LockTtl = lockTtl;
             LockMetadataTtl = lockMetadataTtl;
             KeepLockAliveInterval = keepLockAliveInterval;
             if(changeLockRowThreshold <= 0)
-                throw new ArgumentException("ChangeRowThreshold must be positive integer", "changeLockRowThreshold");
+                throw new ArgumentException("ChangeRowThreshold must be positive integer", nameof(changeLockRowThreshold));
             ChangeLockRowThreshold = changeLockRowThreshold;
         }
 
         [NotNull]
-        public ITimestampProvider TimestampProvider { get; private set; }
+        public ITimestampProvider TimestampProvider { get; }
 
         [NotNull]
-        public ColumnFamilyFullName ColumnFamilyFullName { get; private set; }
-
-        public TimeSpan LockTtl { get; private set; }
-        public TimeSpan LockMetadataTtl { get; private set; }
-        public TimeSpan KeepLockAliveInterval { get; private set; }
-        public int ChangeLockRowThreshold { get; private set; }
+        public string KeyspaceName { get; }
 
         [NotNull]
-        public static CassandraRemoteLockImplementationSettings Default([NotNull] ColumnFamilyFullName columnFamilyFullName)
+        public string ColumnFamilyName { get; }
+
+        public TimeSpan LockTtl { get; }
+        public TimeSpan LockMetadataTtl { get; }
+        public TimeSpan KeepLockAliveInterval { get; }
+        public int ChangeLockRowThreshold { get; }
+
+        [NotNull]
+        public static CassandraRemoteLockImplementationSettings Default([NotNull] string keyspaceName, [NotNull] string columnFamilyName)
         {
-            return new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), columnFamilyFullName, TimeSpan.FromMinutes(3), TimeSpan.FromDays(7), TimeSpan.FromSeconds(10), 1000);
+            return new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), keyspaceName, columnFamilyName, TimeSpan.FromMinutes(3), TimeSpan.FromDays(7), TimeSpan.FromSeconds(10), 1000);
         }
     }
 }

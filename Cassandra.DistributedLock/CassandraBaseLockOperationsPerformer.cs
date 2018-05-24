@@ -10,7 +10,6 @@ using JetBrains.Annotations;
 using SKBKontur.Cassandra.CassandraClient.Abstractions;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.CassandraClient.Connections;
-using SKBKontur.Catalogue.CassandraPrimitives.Storages.Primitives;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
@@ -21,7 +20,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             this.cassandraCluster = cassandraCluster;
             this.serializer = serializer;
             timestampProvider = settings.TimestampProvider;
-            columnFamilyFullName = settings.ColumnFamilyFullName;
+            keyspaceName = settings.KeyspaceName;
+            columnFamilyName = settings.ColumnFamilyName;
             lockTtl = settings.LockTtl;
             lockMetadataTtl = settings.LockMetadataTtl;
         }
@@ -130,7 +130,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 
         private void MakeInConnection(Action<IColumnFamilyConnection> action)
         {
-            var connection = cassandraCluster.RetrieveColumnFamilyConnection(columnFamilyFullName.KeyspaceName, columnFamilyFullName.ColumnFamilyName);
+            var connection = cassandraCluster.RetrieveColumnFamilyConnection(keyspaceName, columnFamilyName);
             action(connection);
         }
 
@@ -179,7 +179,8 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private readonly ICassandraCluster cassandraCluster;
         private readonly ISerializer serializer;
         private readonly ITimestampProvider timestampProvider;
-        private readonly ColumnFamilyFullName columnFamilyFullName;
+        private readonly string keyspaceName;
+        private readonly string columnFamilyName;
         private readonly TimeSpan lockTtl;
         private readonly TimeSpan lockMetadataTtl;
         private long lastTicks;

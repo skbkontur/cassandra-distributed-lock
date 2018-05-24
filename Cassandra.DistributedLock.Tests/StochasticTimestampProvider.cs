@@ -1,12 +1,9 @@
 using System;
 
-using GroboContainer.Infection;
-
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.Tests.FunctionalTests.Tests.RemoteLockTests
+namespace Cassandra.DistributedLock.Tests
 {
-    [IgnoredImplementation]
     public class StochasticTimestampProvider : ITimestampProvider
     {
         public StochasticTimestampProvider(TimestampProviderStochasticType stochasticType, TimeSpan lockTtl)

@@ -1,0 +1,14 @@
+image: Visual Studio 2017
+
+init:
+  - cmd: git config --global core.autocrlf false
+
+before_build:
+  - cmd: dotnet --info
+  - cmd: dotnet restore ./Cassandra.DistributedLock.sln --verbosity minimal
+
+build_script:
+  - cmd: dotnet build --configuration Release ./Cassandra.DistributedLock.sln
+
+test_script:
+  - cmd: dotnet test --no-build --verbosity normal --configuration Release ./Cassandra.DistributedLock.Tests/Cassandra.DistributedLock.Tests.csproj

@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2000
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cassandra.DistributedLock", "Cassandra.DistributedLock\Cassandra.DistributedLock.csproj", "{57FE2640-16A7-4E88-833A-DAD54A89E967}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cassandra.DistributedLock.Tests", "Cassandra.DistributedLock.Tests\Cassandra.DistributedLock.Tests.csproj", "{5B5B627B-F200-41E0-ADF2-E44CAA8D4032}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57FE2640-16A7-4E88-833A-DAD54A89E967}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57FE2640-16A7-4E88-833A-DAD54A89E967}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57FE2640-16A7-4E88-833A-DAD54A89E967}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57FE2640-16A7-4E88-833A-DAD54A89E967}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B5B627B-F200-41E0-ADF2-E44CAA8D4032}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B5B627B-F200-41E0-ADF2-E44CAA8D4032}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B5B627B-F200-41E0-ADF2-E44CAA8D4032}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B5B627B-F200-41E0-ADF2-E44CAA8D4032}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A2D0D6FE-462E-4080-92C9-B04AB5BBCEDA}
+	EndGlobalSection
+EndGlobal

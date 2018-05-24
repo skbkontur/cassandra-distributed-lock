@@ -1,0 +1,6 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=750042AE83BD684DB2A05CD8CCE23A98/AbsolutePath/@EntryValue">C:\projects\open-source\skbkontur\cassandra-distributed-lock\Common.DotSettings</s:String>
+	<s:String x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=750042AE83BD684DB2A05CD8CCE23A98/RelativePath/@EntryValue">..\Common.DotSettings</s:String>
+	<s:Boolean x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=750042AE83BD684DB2A05CD8CCE23A98/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/Environment/InjectedLayers/InjectedLayerCustomization/=File750042AE83BD684DB2A05CD8CCE23A98/@KeyIndexDefined">True</s:Boolean>
+	<s:Double x:Key="/Default/Environment/InjectedLayers/InjectedLayerCustomization/=File750042AE83BD684DB2A05CD8CCE23A98/RelativePriority/@EntryValue">1</s:Double></wpf:ResourceDictionary>

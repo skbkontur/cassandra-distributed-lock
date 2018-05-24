@@ -20,7 +20,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
     <PackageReference Include="SkbKontur.Cassandra.Local" Version="1.0.10" />
     <PackageReference Include="SkbKontur.Cassandra.ThriftClient" Version="2.0.0-rc5" />
-    <PackageReference Include="Vostok.Logging" Version="0.0.1" />
+    <PackageReference Include="Vostok.Logging" Version="0.0.3" />
   </ItemGroup>
 
   <ItemGroup>

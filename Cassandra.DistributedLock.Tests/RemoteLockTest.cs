@@ -46,8 +46,8 @@ namespace Cassandra.DistributedLock.Tests
                 thread.Abort();
         }
 
-        [TestCase(LocalRivalOptimization.Disabled)]
-        [TestCase(LocalRivalOptimization.Enabled)]
+        [TestCase(LocalRivalOptimization.Disabled, Category = "LongRunning")]
+        [TestCase(LocalRivalOptimization.Enabled, Category = "LongRunning")]
         public void StressTest(LocalRivalOptimization localRivalOptimization)
         {
             DoTestIncrementDecrementLock(30, TimeSpan.FromSeconds(60), localRivalOptimization);

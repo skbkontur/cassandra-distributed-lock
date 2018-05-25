@@ -58,8 +58,8 @@ namespace Cassandra.DistributedLock.Tests
 
         [TestCase(1, 37, 1000, TimestampProviderStochasticType.BothPositiveAndNegative)]
         [TestCase(1, 37, 1000, TimestampProviderStochasticType.OnlyPositive)]
-        [TestCase(1, 50, 750, TimestampProviderStochasticType.BothPositiveAndNegative)]
-        [TestCase(1, 50, 750, TimestampProviderStochasticType.OnlyPositive)]
+        [TestCase(1, 50, 750, TimestampProviderStochasticType.BothPositiveAndNegative, Category = "LongRunning")]
+        [TestCase(1, 50, 750, TimestampProviderStochasticType.OnlyPositive, Category = "LongRunning")]
         public void HighFrequencyKeepAlive(int locks, int threads, int operationsPerThread, TimestampProviderStochasticType stochasticType)
         {
             DoTest(new TestConfig
@@ -86,7 +86,7 @@ namespace Cassandra.DistributedLock.Tests
 
         [TestCase(1, 1, 1000, TimestampProviderStochasticType.None)]
         [TestCase(1, 10, 1000, TimestampProviderStochasticType.None)]
-        [TestCase(1, 25, 1000, TimestampProviderStochasticType.OnlyPositive)]
+        [TestCase(1, 25, 1000, TimestampProviderStochasticType.OnlyPositive, Category = "LongRunning")]
         [TestCase(1, 25, 1000, TimestampProviderStochasticType.BothPositiveAndNegative)]
         public void SmallTtl(int locks, int threads, int operationsPerThread, TimestampProviderStochasticType stochasticType)
         {
@@ -113,7 +113,7 @@ namespace Cassandra.DistributedLock.Tests
         }
 
         [TestCase(1, 1, 100, 0.01d)]
-        [TestCase(1, 4, 300, 0.005d)]
+        [TestCase(1, 4, 300, 0.005d, Category = "LongRunning")]
         [TestCase(2, 5, 100, 0.01d)]
         public void FailedCassandra(int locks, int threads, int operationsPerThread, double failProbability)
         {

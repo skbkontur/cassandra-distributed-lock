@@ -6,9 +6,9 @@ using log4net;
 using log4net.Core;
 using log4net.Util;
 
-using Vostok.Logging;
+using Vostok.Logging.Abstractions;
 
-using ILog = Vostok.Logging.ILog;
+using ILog = Vostok.Logging.Abstractions.ILog;
 
 namespace Cassandra.DistributedLock.Tests.Logging
 {

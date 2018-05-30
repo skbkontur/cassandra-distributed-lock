@@ -15,7 +15,7 @@ using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 
-using Vostok.Logging;
+using Vostok.Logging.Abstractions;
 
 namespace Cassandra.DistributedLock.Tests
 {

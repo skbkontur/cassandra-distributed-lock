@@ -4,8 +4,8 @@ using System.Threading;
 
 using JetBrains.Annotations;
 
-using Vostok.Logging;
-using Vostok.Logging.Extensions;
+using Vostok.Logging.Abstractions;
+using Vostok.Logging.Abstractions.Extensions;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {

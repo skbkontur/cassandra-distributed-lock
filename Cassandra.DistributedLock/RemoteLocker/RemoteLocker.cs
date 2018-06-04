@@ -15,7 +15,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         {
             this.remoteLockImplementation = remoteLockImplementation;
             this.metrics = metrics;
-            this.logger = logger;
+            this.logger = logger.WithContext("CassandraDistributedLock");
             keepLockAliveInterval = remoteLockImplementation.KeepLockAliveInterval;
             lockOperationWarnThreshold = remoteLockImplementation.KeepLockAliveInterval.Multiply(2);
             remoteLocksKeeperThread = new Thread(KeepRemoteLocksAlive)

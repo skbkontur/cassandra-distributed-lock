@@ -5,7 +5,6 @@ using System.Threading;
 using JetBrains.Annotations;
 
 using Vostok.Logging.Abstractions;
-using Vostok.Logging.Abstractions.Extensions;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 {
@@ -15,7 +14,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         {
             this.remoteLockImplementation = remoteLockImplementation;
             this.metrics = metrics;
-            this.logger = logger.WithContext("CassandraDistributedLock");
+            this.logger = logger.ForContext("CassandraDistributedLock");
             keepLockAliveInterval = remoteLockImplementation.KeepLockAliveInterval;
             lockOperationWarnThreshold = remoteLockImplementation.KeepLockAliveInterval.Multiply(2);
             remoteLocksKeeperThread = new Thread(KeepRemoteLocksAlive)

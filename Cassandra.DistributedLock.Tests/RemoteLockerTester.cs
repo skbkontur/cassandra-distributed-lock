@@ -30,22 +30,22 @@ namespace Cassandra.DistributedLock.Tests
             var localRivalOptimizationIsEnabled = config.LocalRivalOptimization != LocalRivalOptimization.Disabled;
             var serializer = new Serializer(new AllPropertiesExtractor(), null, GroBufOptions.MergeOnRead);
             ICassandraCluster cassandraCluster = new CassandraCluster(config.CassandraClusterSettings, logger);
-            if(config.CassandraFailProbability.HasValue)
+            if (config.CassandraFailProbability.HasValue)
                 cassandraCluster = new FailedCassandraCluster(cassandraCluster, config.CassandraFailProbability.Value);
             var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType, config.LockTtl);
             var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, SingleCassandraNodeSetUpFixture.RemoteLockKeyspace, SingleCassandraNodeSetUpFixture.RemoteLockColumnFamily, config.LockTtl, config.LockMetadataTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
             var cassandraRemoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings);
             remoteLockers = new RemoteLocker[config.LockersCount];
             remoteLockerMetrics = new RemoteLockerMetrics("dummyKeyspace");
-            if(localRivalOptimizationIsEnabled)
+            if (localRivalOptimizationIsEnabled)
             {
                 var remoteLocker = new RemoteLocker(cassandraRemoteLockImplementation, remoteLockerMetrics, logger);
-                for(var i = 0; i < config.LockersCount; i++)
+                for (var i = 0; i < config.LockersCount; i++)
                     remoteLockers[i] = remoteLocker;
             }
             else
             {
-                for(var i = 0; i < config.LockersCount; i++)
+                for (var i = 0; i < config.LockersCount; i++)
                     remoteLockers[i] = new RemoteLocker(new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings), remoteLockerMetrics, logger);
             }
             // it is important to use another CassandraCluster (with another setting of attempts, for example)
@@ -55,7 +55,7 @@ namespace Cassandra.DistributedLock.Tests
         public void Dispose()
         {
             var disposeTasks = new Task[remoteLockers.Length];
-            for(var i = 0; i < remoteLockers.Length; i++)
+            for (var i = 0; i < remoteLockers.Length; i++)
             {
                 var localI = i;
                 disposeTasks[i] = Task.Factory.StartNew(() => remoteLockers[localI].Dispose());

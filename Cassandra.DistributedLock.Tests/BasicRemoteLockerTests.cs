@@ -10,7 +10,7 @@ namespace Cassandra.DistributedLock.Tests
         [Test]
         public void TryLock_SingleLockId()
         {
-            using(var tester = new RemoteLockerTester())
+            using (var tester = new RemoteLockerTester())
             {
                 var lockId = Guid.NewGuid().ToString();
                 Assert.That(tester.TryGetLock(lockId, out var lock1), Is.True);
@@ -27,7 +27,7 @@ namespace Cassandra.DistributedLock.Tests
         [Test]
         public void TryLock_DifferentLockIds()
         {
-            using(var tester = new RemoteLockerTester())
+            using (var tester = new RemoteLockerTester())
             {
                 var lockId1 = Guid.NewGuid().ToString();
                 var lockId2 = Guid.NewGuid().ToString();
@@ -44,7 +44,7 @@ namespace Cassandra.DistributedLock.Tests
         [Test]
         public void Lock()
         {
-            using(var tester = new RemoteLockerTester())
+            using (var tester = new RemoteLockerTester())
             {
                 var lockId = Guid.NewGuid().ToString();
                 var lock1 = tester.Lock(lockId);
@@ -69,7 +69,7 @@ namespace Cassandra.DistributedLock.Tests
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
-            using(var tester = new RemoteLockerTester(config))
+            using (var tester = new RemoteLockerTester(config))
             {
                 var lockId = Guid.NewGuid().ToString();
                 var lock1 = tester[0].Lock(lockId);
@@ -95,7 +95,7 @@ namespace Cassandra.DistributedLock.Tests
                     TimestamProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
-            using(var tester = new RemoteLockerTester(config))
+            using (var tester = new RemoteLockerTester(config))
             {
                 var lockId = Guid.NewGuid().ToString();
                 var lock1 = tester[0].Lock(lockId);

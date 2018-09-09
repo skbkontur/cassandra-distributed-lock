@@ -21,7 +21,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             LockTtl = lockTtl;
             LockMetadataTtl = lockMetadataTtl;
             KeepLockAliveInterval = keepLockAliveInterval;
-            if(changeLockRowThreshold <= 0)
+            if (changeLockRowThreshold <= 0)
                 throw new ArgumentException("ChangeRowThreshold must be positive integer", nameof(changeLockRowThreshold));
             ChangeLockRowThreshold = changeLockRowThreshold;
         }

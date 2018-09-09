@@ -82,7 +82,7 @@ namespace Cassandra.DistributedLock.Tests
 
         private static string FindCassandraTemplateDirectory(string currentDir)
         {
-            if(currentDir == null)
+            if (currentDir == null)
                 throw new Exception("Невозможно найти каталог с Cassandra-шаблонами");
             var cassandraTemplateDirectory = Path.Combine(currentDir, cassandraTemplates);
             return Directory.Exists(cassandraTemplateDirectory) ? cassandraTemplateDirectory : FindCassandraTemplateDirectory(Path.GetDirectoryName(currentDir));

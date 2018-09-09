@@ -7,7 +7,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         public RemoteLockerMetrics(string keyspaceName)
         {
             Context = Metric.Context("RemoteLocker");
-            if(!string.IsNullOrEmpty(keyspaceName))
+            if (!string.IsNullOrEmpty(keyspaceName))
                 Context = Context.Context(keyspaceName);
             LockOp = Context.Timer("Lock", Unit.Calls, SamplingType.ExponentiallyDecaying, TimeUnit.Minutes);
             TryGetLockOp = Context.Timer("TryGetLock", Unit.Calls, SamplingType.ExponentiallyDecaying, TimeUnit.Minutes);

@@ -16,7 +16,7 @@ namespace Cassandra.DistributedLock.Tests
         {
             // lock algorithm is correct only when time is out of sync by no more than lockTtl.
             long diff = 0;
-            switch(stochasticType)
+            switch (stochasticType)
             {
             case TimestampProviderStochasticType.None:
                 diff = 0;

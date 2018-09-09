@@ -147,12 +147,12 @@ namespace Cassandra.DistributedLock.Tests
             var resources = new ConcurrentDictionary<string, Guid>();
             var opsCounters = new ConcurrentDictionary<string, int>();
             var allowFails = cfg.TesterConfig.CassandraFailProbability.HasValue;
-            using(var tester = new RemoteLockerTester(cfg.TesterConfig))
+            using (var tester = new RemoteLockerTester(cfg.TesterConfig))
             {
                 var stopSignal = new ManualResetEvent(false);
                 var syncSignal = new ManualResetEvent(true);
                 Task syncerThread = null;
-                if(cfg.SyncInterval.HasValue)
+                if (cfg.SyncInterval.HasValue)
                 {
                     syncerThread = Task.Factory.StartNew(() =>
                         {
@@ -161,38 +161,38 @@ namespace Cassandra.DistributedLock.Tests
                                 syncSignal.Reset();
                                 Thread.Sleep(longOpDuration);
                                 syncSignal.Set();
-                            } while(!stopSignal.WaitOne(cfg.SyncInterval.Value));
+                            } while (!stopSignal.WaitOne(cfg.SyncInterval.Value));
                         });
                 }
                 var localTester = tester;
                 var actions = new Action<MultithreadingTestHelper.RunState>[cfg.TesterConfig.LockersCount];
-                for(var th = 0; th < actions.Length; th++)
+                for (var th = 0; th < actions.Length; th++)
                 {
                     var remoteLockCreator = tester[th];
                     actions[th] = state =>
                         {
                             var rng = new Random(Guid.NewGuid().GetHashCode());
                             var op = 0;
-                            while(op < cfg.OperationsPerThread)
+                            while (op < cfg.OperationsPerThread)
                             {
                                 IRemoteLock @lock = null;
                                 var disposed = false;
                                 try
                                 {
-                                    if(state.ErrorOccurred)
+                                    if (state.ErrorOccurred)
                                         break;
                                     var lockIndex = rng.Next(lockIds.Length);
                                     var lockId = lockIds[lockIndex];
                                     @lock = Lock(remoteLockCreator, syncSignal, rng, lockId, state);
-                                    if(@lock == null)
+                                    if (@lock == null)
                                         break;
                                     var localOpsCounter = opsCounters.GetOrAdd(lockId, 0);
                                     var resource = Guid.NewGuid();
                                     resources[lockId] = resource;
                                     var opDuration = TimeSpan.FromMilliseconds(rng.Next(1, 47));
-                                    if(rng.NextDouble() < cfg.FastRunningOpProbability)
+                                    if (rng.NextDouble() < cfg.FastRunningOpProbability)
                                         opDuration = TimeSpan.Zero;
-                                    else if(rng.NextDouble() < cfg.LongRunningOpProbability)
+                                    else if (rng.NextDouble() < cfg.LongRunningOpProbability)
                                         opDuration = opDuration.Add(longOpDuration);
                                     Thread.Sleep(opDuration);
                                     CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
@@ -201,7 +201,7 @@ namespace Cassandra.DistributedLock.Tests
                                     Assert.That(lockMetadata.ProbableOwnerThreadId, Is.EqualTo(@lock.ThreadId));
                                     Assert.That(resources[lockId], Is.EqualTo(resource));
                                     Assert.That(opsCounters[lockId], Is.EqualTo(localOpsCounter));
-                                    if(++localOpsCounter % (cfg.TesterConfig.LockersCount * cfg.OperationsPerThread / 100) == 0)
+                                    if (++localOpsCounter % (cfg.TesterConfig.LockersCount * cfg.OperationsPerThread / 100) == 0)
                                         Console.Out.Write(".");
                                     opsCounters[lockId] = localOpsCounter;
                                     @lock.Dispose();
@@ -212,7 +212,7 @@ namespace Cassandra.DistributedLock.Tests
                                      * But it must be automatically deleted after lockTtl.
                                      * For performance reason we do first check manually, because .After sleeps at least polling interval before first check
                                      */
-                                    if(localTester.GetThreadsInMainRow(lockId).Contains(@lock.ThreadId))
+                                    if (localTester.GetThreadsInMainRow(lockId).Contains(@lock.ThreadId))
                                     {
                                         Assert.That(() => localTester.GetThreadsInMainRow(lockId), Is.Not
                                                                                                      .Contains(@lock.ThreadId)
@@ -220,14 +220,14 @@ namespace Cassandra.DistributedLock.Tests
                                     }
                                     op++;
                                 }
-                                catch(FailedCassandraClusterException)
+                                catch (FailedCassandraClusterException)
                                 {
-                                    if(!allowFails)
+                                    if (!allowFails)
                                         throw;
                                 }
                                 finally
                                 {
-                                    if(@lock != null && !disposed)
+                                    if (@lock != null && !disposed)
                                         @lock.Dispose();
                                 }
                             }
@@ -242,12 +242,12 @@ namespace Cassandra.DistributedLock.Tests
 
         private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, ManualResetEvent syncSignal, Random rng, string lockId, MultithreadingTestHelper.RunState state)
         {
-            while(true)
+            while (true)
             {
-                if(state.ErrorOccurred)
+                if (state.ErrorOccurred)
                     return null;
                 syncSignal.WaitOne();
-                if(remoteLockCreator.TryGetLock(lockId, out var remoteLock))
+                if (remoteLockCreator.TryGetLock(lockId, out var remoteLock))
                     return remoteLock;
                 Thread.Sleep(rng.Next(32));
             }

@@ -14,13 +14,6 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 
         private struct TimeMeasuringContext : IDisposable
         {
-            private readonly Timer timer;
-            private readonly Action<TimeSpan> finalAction;
-            private readonly string userValue;
-
-            private readonly long start;
-            private bool disposed;
-
             public TimeMeasuringContext(Timer timer, Action<TimeSpan> finalAction, string userValue = null)
             {
                 this.timer = timer;
@@ -33,7 +26,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
 
             public void Dispose()
             {
-                if(!disposed)
+                if (!disposed)
                 {
                     disposed = true;
                     var elapsed = timer.EndRecording() - start;
@@ -41,6 +34,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     finalAction(TimeSpan.FromMilliseconds(TimeUnit.Nanoseconds.ToMilliseconds(elapsed)));
                 }
             }
+
+            private readonly Timer timer;
+            private readonly Action<TimeSpan> finalAction;
+            private readonly string userValue;
+
+            private readonly long start;
+            private bool disposed;
         }
     }
 }

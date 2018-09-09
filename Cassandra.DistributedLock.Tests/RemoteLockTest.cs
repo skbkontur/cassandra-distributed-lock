@@ -44,7 +44,7 @@ namespace Cassandra.DistributedLock.Tests
         public void TearDown()
         {
             logger.Info("Start TeadDown, runningThreads = {0}", runningThreads);
-            foreach(var thread in threads ?? new List<Thread>())
+            foreach (var thread in threads ?? new List<Thread>())
                 thread.Abort();
         }
 
@@ -66,7 +66,7 @@ namespace Cassandra.DistributedLock.Tests
         {
             var remoteLockCreators = PrepareRemoteLockCreators(threadCount, localRivalOptimization, remoteLockImplementation);
 
-            for(var i = 0; i < threadCount; i++)
+            for (var i = 0; i < threadCount; i++)
                 AddThread(IncrementDecrementAction, remoteLockCreators[i]);
             RunThreads(runningTimeInterval);
             JoinThreads();
@@ -79,7 +79,7 @@ namespace Cassandra.DistributedLock.Tests
             try
             {
                 var remoteLock = lockCreator.Lock(lockId);
-                using(remoteLock)
+                using (remoteLock)
                 {
                     logger.Info("MakeLock with threadId: " + remoteLock.ThreadId);
                     Thread.Sleep(1000);
@@ -91,7 +91,7 @@ namespace Cassandra.DistributedLock.Tests
                     Interlocked.Decrement(ref x);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error(e);
                 throw;
@@ -115,7 +115,7 @@ namespace Cassandra.DistributedLock.Tests
                 var lockShades = remoteLockImplementation.GetShadeThreads(lockId);
                 logger.Info("LockShades: " + string.Join(", ", lockShades));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error(e);
                 throw;
@@ -136,7 +136,7 @@ namespace Cassandra.DistributedLock.Tests
             logger.Info("JoinThreads. begin");
             isEnd = true;
             running.Set();
-            foreach(var thread in threads)
+            foreach (var thread in threads)
                 Assert.That(thread.Join(TimeSpan.FromSeconds(180)), "Не удалось остановить поток");
             logger.Info("JoinThreads. end");
         }
@@ -147,13 +147,13 @@ namespace Cassandra.DistributedLock.Tests
             running.Set();
             Thread.Sleep(runningTimeInterval);
             running.Reset();
-            while(Interlocked.CompareExchange(ref runningThreads, 0, 0) != 0)
+            while (Interlocked.CompareExchange(ref runningThreads, 0, 0) != 0)
             {
                 Thread.Sleep(50);
                 logger.Info("Wait runningThreads = 0. Now runningThreads = {0}", runningThreads);
-                foreach(var thread in threads)
+                foreach (var thread in threads)
                 {
-                    if(!thread.IsAlive)
+                    if (!thread.IsAlive)
                         throw new Exception("Поток сдох");
                 }
             }
@@ -165,7 +165,7 @@ namespace Cassandra.DistributedLock.Tests
             try
             {
                 var localRandom = new Random(seed);
-                while(!isEnd)
+                while (!isEnd)
                 {
                     running.WaitOne();
                     Interlocked.Increment(ref runningThreads);
@@ -173,7 +173,7 @@ namespace Cassandra.DistributedLock.Tests
                     Interlocked.Decrement(ref runningThreads);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error(e);
             }
@@ -183,15 +183,15 @@ namespace Cassandra.DistributedLock.Tests
         {
             var remoteLockCreators = new IRemoteLockCreator[threadCount];
             var remoteLockerMetrics = new RemoteLockerMetrics(null);
-            if(localRivalOptimization == LocalRivalOptimization.Enabled)
+            if (localRivalOptimization == LocalRivalOptimization.Enabled)
             {
                 var singleRemoteLocker = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics, logger);
-                for(var i = 0; i < threadCount; i++)
+                for (var i = 0; i < threadCount; i++)
                     remoteLockCreators[i] = singleRemoteLocker;
             }
             else
             {
-                for(var i = 0; i < threadCount; i++)
+                for (var i = 0; i < threadCount; i++)
                     remoteLockCreators[i] = new RemoteLocker(remoteLockImplementation, remoteLockerMetrics, logger);
             }
             return remoteLockCreators;
@@ -199,7 +199,7 @@ namespace Cassandra.DistributedLock.Tests
 
         private static void DisposeRemoteLockCreators(IRemoteLockCreator[] remoteLockCreators)
         {
-            foreach(var remoteLockCreator in remoteLockCreators)
+            foreach (var remoteLockCreator in remoteLockCreators)
                 ((RemoteLocker)remoteLockCreator).Dispose();
         }
 

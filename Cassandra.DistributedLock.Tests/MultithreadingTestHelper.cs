@@ -17,7 +17,7 @@ namespace Cassandra.DistributedLock.Tests
                     {
                         action(runState);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         errors.Add(e);
                         Console.WriteLine(e);
@@ -34,11 +34,11 @@ namespace Cassandra.DistributedLock.Tests
             var errors = new ConcurrentBag<Exception>();
             var runState = new RunState(errors);
             var threads = actions.Select((a, threadId) => CreateThread(errors, runState, a, threadId.ToString())).ToList();
-            foreach(var t in threads)
+            foreach (var t in threads)
                 t.Start();
-            foreach(var t in threads)
+            foreach (var t in threads)
             {
-                if(!t.Join(timeout))
+                if (!t.Join(timeout))
                     Assert.Fail("Thread did not terminate in: {0}", timeout);
                 Assert.That(errors, Is.Empty);
             }

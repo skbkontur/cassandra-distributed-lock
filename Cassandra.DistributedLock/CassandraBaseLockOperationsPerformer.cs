@@ -115,7 +115,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
             Column[] columns = null;
             var rowKey = lockId.ToLockMetadataRowKey();
             MakeInConnection(connection => columns = connection.GetColumns(rowKey, allMetadataColumnNames));
-            if(!columns.Any())
+            if (!columns.Any())
                 return null;
             var lockRowIdColumn = columns.SingleOrDefault(x => x.Name == lockRowIdColumnName);
             var lockRowId = lockRowIdColumn == null ? lockId : serializer.Deserialize<string>(lockRowIdColumn.Value);
@@ -138,11 +138,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         private long GetNowTicks()
         {
             var ticks = timestampProvider.GetNowTicks();
-            while(true)
+            while (true)
             {
                 var last = Interlocked.Read(ref lastTicks);
                 var cur = Math.Max(ticks, last + ticksPerMicrosecond);
-                if(Interlocked.CompareExchange(ref lastTicks, cur, last) == last)
+                if (Interlocked.CompareExchange(ref lastTicks, cur, last) == last)
                     return cur;
             }
         }
@@ -150,7 +150,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         [NotNull]
         private static string TransformThreadIdToColumnName(long? threshold, [NotNull] string threadId)
         {
-            if(string.IsNullOrEmpty(threadId))
+            if (string.IsNullOrEmpty(threadId))
                 throw new ArgumentException("Empty ThreadId is not supported", nameof(threadId));
             return threshold == null ?
                        threadId :

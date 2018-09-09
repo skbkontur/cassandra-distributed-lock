@@ -187,9 +187,9 @@ namespace Cassandra.DistributedLock.Tests.FailedCassandra
 
         private void MayBeFail()
         {
-            lock(random)
+            lock (random)
             {
-                if(random.NextDouble() < failProbability)
+                if (random.NextDouble() < failProbability)
                     throw new FailedCassandraClusterException("Ошибка при работе с кассандрой");
             }
         }

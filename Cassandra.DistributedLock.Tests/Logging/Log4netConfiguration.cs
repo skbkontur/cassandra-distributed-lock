@@ -6,7 +6,7 @@ namespace Cassandra.DistributedLock.Tests.Logging
     {
         public static void InitializeOnce()
         {
-            if(!initialized)
+            if (!initialized)
             {
                 var type = typeof(Log4NetConfiguration);
                 XmlConfigurator.Configure(type.Assembly.GetManifestResourceStream(type, "log4net.config"));

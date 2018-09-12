@@ -12,4 +12,9 @@
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" PrivateAssets="All" />
+    <PackageReference Include="Nerdbank.GitVersioning" Version="2.2.13" PrivateAssets="All" />
+  </ItemGroup>
+
 </Project>

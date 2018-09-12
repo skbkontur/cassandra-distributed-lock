@@ -34,7 +34,7 @@ namespace Cassandra.DistributedLock.Tests
                     JmxPort = 7399,
                     GossipPort = 7400,
                 };
-            node.Restart();
+            node.Restart(timeout: TimeSpan.FromMinutes(1));
 
             var logger = new Log4netLog(LogManager.GetLogger(typeof(SingleCassandraNodeSetUpFixture)));
             cassandraCluster = new CassandraCluster(CreateCassandraClusterSettings(), logger);

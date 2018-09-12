@@ -7,4 +7,17 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="SetNuSpecProperties" BeforeTargets="GenerateNuspec" DependsOnTargets="GetBuildVersion">
+    <PropertyGroup>
+      <PackageId>$(AssemblyName)</PackageId>
+      <Authors>Ivan Burmistrov, Fedor Fominykh, Andrew Kostousov</Authors>
+      <PackageTags>cassandra distributed lock</PackageTags>
+      <Description>.NET library implementing distributed lock synchronization primitive using Apache Cassandra</Description>
+      <RepositoryType>git</RepositoryType>
+      <RepositoryUrl>https://github.com/skbkontur/cassandra-distributed-lock</RepositoryUrl>
+      <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+      <PackageReleaseNotes>$(RepositoryUrl)/releases/tag/v$(MajorMinorVersion)-release</PackageReleaseNotes>
+    </PropertyGroup>
+  </Target>
+
 </Project>

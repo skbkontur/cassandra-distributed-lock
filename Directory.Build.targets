@@ -12,7 +12,7 @@
       <PackageId>$(AssemblyName)</PackageId>
       <Authors>Ivan Burmistrov, Fedor Fominykh, Andrew Kostousov</Authors>
       <PackageTags>cassandra distributed lock</PackageTags>
-      <Description>.NET library implementing distributed lock synchronization primitive using Apache Cassandra</Description>
+      <PackageDescription>.NET library implementing distributed lock synchronization primitive using Apache Cassandra</PackageDescription>
       <RepositoryType>git</RepositoryType>
       <RepositoryUrl>https://github.com/skbkontur/cassandra-distributed-lock</RepositoryUrl>
       <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>

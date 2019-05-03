@@ -4,17 +4,13 @@ using System.Net;
 
 using Cassandra.DistributedLock.Tests.Logging;
 
-using log4net;
-
 using NUnit.Framework;
-
-using SkbKontur.Cassandra.Local;
 
 using SKBKontur.Cassandra.CassandraClient.Abstractions;
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Cassandra.CassandraClient.Scheme;
 
-using Vostok.Logging.Log4net;
+using SkbKontur.Cassandra.Local;
 
 namespace Cassandra.DistributedLock.Tests
 {
@@ -34,9 +30,9 @@ namespace Cassandra.DistributedLock.Tests
                     JmxPort = 7399,
                     GossipPort = 7400,
                 };
-            node.Restart(timeout: TimeSpan.FromMinutes(1));
+            node.Restart(timeout : TimeSpan.FromMinutes(1));
 
-            var logger = new Log4netLog(LogManager.GetLogger(typeof(SingleCassandraNodeSetUpFixture)));
+            var logger = Log4NetConfiguration.RootLogger.ForContext(nameof(SingleCassandraNodeSetUpFixture));
             cassandraCluster = new CassandraCluster(CreateCassandraClusterSettings(), logger);
             cassandraCluster.ActualizeKeyspaces(new[]
                 {

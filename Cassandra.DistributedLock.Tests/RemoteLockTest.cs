@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
+using Cassandra.DistributedLock.Tests.Logging;
+
 using GroBuf;
 using GroBuf.DataMembersExtracters;
-
-using log4net;
 
 using NUnit.Framework;
 
@@ -14,9 +14,6 @@ using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 
 using Vostok.Logging.Abstractions;
-using Vostok.Logging.Log4net;
-
-using ILog = Vostok.Logging.Abstractions.ILog;
 
 namespace Cassandra.DistributedLock.Tests
 {
@@ -210,6 +207,6 @@ namespace Cassandra.DistributedLock.Tests
         private int runningThreads;
         private List<Thread> threads;
         private readonly ManualResetEvent running = new ManualResetEvent(false);
-        private static readonly ILog logger = new Log4netLog(LogManager.GetLogger(typeof(RemoteLockTest)));
+        private static readonly ILog logger = Log4NetConfiguration.RootLogger.ForContext(nameof(RemoteLockTest));
     }
 }

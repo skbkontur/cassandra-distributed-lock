@@ -3,11 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cassandra.DistributedLock.Tests.FailedCassandra;
+using Cassandra.DistributedLock.Tests.Logging;
 
 using GroBuf;
 using GroBuf.DataMembersExtracters;
-
-using log4net;
 
 using Metrics;
 using Metrics.Reporters;
@@ -16,9 +15,7 @@ using SKBKontur.Cassandra.CassandraClient.Clusters;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
 
-using Vostok.Logging.Log4net;
-
-using ILog = Vostok.Logging.Abstractions.ILog;
+using Vostok.Logging.Abstractions;
 
 namespace Cassandra.DistributedLock.Tests
 {
@@ -101,6 +98,6 @@ namespace Cassandra.DistributedLock.Tests
         private readonly RemoteLocker[] remoteLockers;
         private readonly RemoteLockerMetrics remoteLockerMetrics;
         private readonly CassandraRemoteLockImplementation cassandraRemoteLockImplementationForCheckings;
-        private static readonly ILog logger = new Log4netLog(LogManager.GetLogger(typeof(RemoteLockerTester)));
+        private static readonly ILog logger = Log4NetConfiguration.RootLogger.ForContext(nameof(RemoteLockerTester));
     }
 }

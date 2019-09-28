@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net471</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SkbKontur.Cassandra.DistributedLock</AssemblyName>
     <RootNamespace>SKBKontur.Catalogue.CassandraPrimitives.RemoteLock</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="GroBuf" Version="1.4.8" />
-    <PackageReference Include="SkbKontur.Cassandra.ThriftClient" Version="2.0.35" />
+    <PackageReference Include="SkbKontur.Cassandra.ThriftClient" Version="2.1.1-rc1" />
   </ItemGroup>
 
   <ItemGroup>

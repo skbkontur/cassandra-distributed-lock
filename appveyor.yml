@@ -34,7 +34,8 @@ build_script:
   - cmd: dotnet pack --no-build --configuration Release ./Cassandra.DistributedLock.sln
 
 test_script:
-  - cmd: dotnet test --no-build --verbosity normal --configuration Release --filter TestCategory!=LongRunning ./Cassandra.DistributedLock.Tests/Cassandra.DistributedLock.Tests.csproj
+  # do not run net core tests because of AppVeyor's 1 hour time limit
+  - cmd: dotnet test --no-build --verbosity normal --configuration Release --framework net472 --filter TestCategory!=LongRunning ./Cassandra.DistributedLock.Tests/Cassandra.DistributedLock.Tests.csproj
 
 artifacts:
   - path: './Cassandra.DistributedLock/bin/Release/*.nupkg'

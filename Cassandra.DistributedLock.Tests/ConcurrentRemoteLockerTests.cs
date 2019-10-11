@@ -23,8 +23,8 @@ namespace Cassandra.DistributedLock.Tests
         [TestCase(1, 1, 500, 0.01d, LocalRivalOptimization.Disabled, null)]
         [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Enabled, null)]
         [TestCase(2, 10, 100, 0.05d, LocalRivalOptimization.Disabled, null)]
-        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Enabled, null)]
-        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Disabled, null)]
+        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Enabled, null, Category = "LongRunning")]
+        [TestCase(5, 25, 100, 0.05d, LocalRivalOptimization.Disabled, null, Category = "LongRunning")]
         [TestCase(10, 5, 500, 0.09d, LocalRivalOptimization.Disabled, null, Category = "LongRunning")]
         [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Enabled, null, Category = "LongRunning")]
         [TestCase(1, 25, 100, 0.09d, LocalRivalOptimization.Disabled, null, Category = "LongRunning")]
@@ -57,7 +57,7 @@ namespace Cassandra.DistributedLock.Tests
         }
 
         [TestCase(1, 37, 1000, TimestampProviderStochasticType.BothPositiveAndNegative)]
-        [TestCase(1, 37, 1000, TimestampProviderStochasticType.OnlyPositive)]
+        [TestCase(1, 37, 1000, TimestampProviderStochasticType.OnlyPositive, Category = "LongRunning")]
         [TestCase(1, 50, 750, TimestampProviderStochasticType.BothPositiveAndNegative, Category = "LongRunning")]
         [TestCase(1, 50, 750, TimestampProviderStochasticType.OnlyPositive, Category = "LongRunning")]
         public void HighFrequencyKeepAlive(int locks, int threads, int operationsPerThread, TimestampProviderStochasticType stochasticType)
@@ -87,7 +87,7 @@ namespace Cassandra.DistributedLock.Tests
         [TestCase(1, 1, 1000, TimestampProviderStochasticType.None)]
         [TestCase(1, 10, 1000, TimestampProviderStochasticType.None)]
         [TestCase(1, 25, 1000, TimestampProviderStochasticType.OnlyPositive, Category = "LongRunning")]
-        [TestCase(1, 25, 1000, TimestampProviderStochasticType.BothPositiveAndNegative)]
+        [TestCase(1, 25, 1000, TimestampProviderStochasticType.BothPositiveAndNegative, Category = "LongRunning")]
         public void SmallTtl(int locks, int threads, int operationsPerThread, TimestampProviderStochasticType stochasticType)
         {
             DoTest(new TestConfig

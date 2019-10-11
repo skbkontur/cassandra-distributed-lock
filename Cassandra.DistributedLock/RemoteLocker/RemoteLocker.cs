@@ -153,7 +153,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     rivalThreadId = null;
                     var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
                     if (!remoteLocksById.TryAdd(lockId, remoteLockState))
-                        throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threaId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
+                        throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threadId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
                     remoteLocksQueue.Add(remoteLockState);
                     return new RemoteLockHandle(lockId, threadId, this);
                 case LockAttemptStatus.AnotherThreadIsOwner:
@@ -173,7 +173,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         private void DoReleaseLock(string lockId, string threadId)
         {
             if (!remoteLocksById.TryRemove(lockId, out var remoteLockState) || remoteLockState.ThreadId != threadId)
-                throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threaId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
+                throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threadId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
             Unlock(remoteLockState);
         }
 

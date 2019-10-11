@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.1.0 - 2019.10.11
+- Target .NET Standard 2.0 (PR [#1](https://github.com/skbkontur/cassandra-distributed-lock/pull/1)).
+
 ## v2.0 - 2018.09.12
 - Use [SkbKontur.Cassandra.ThriftClient](https://github.com/skbkontur/cassandra-thrift-client) package from NuGet.
 - Use [SkbKontur.Cassandra.Local](https://github.com/skbkontur/cassandra-local) module for integration testing.

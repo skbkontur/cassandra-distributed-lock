@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.1.0 - 2019.10.11
+## v2.1.8 - 2019.10.12
 - Target .NET Standard 2.0 (PR [#1](https://github.com/skbkontur/cassandra-distributed-lock/pull/1)).
 
 ## v2.0 - 2018.09.12

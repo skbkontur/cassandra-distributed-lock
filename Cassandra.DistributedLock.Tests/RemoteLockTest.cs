@@ -40,9 +40,12 @@ namespace Cassandra.DistributedLock.Tests
         [TearDown]
         public void TearDown()
         {
-            logger.Info("Start TeadDown, runningThreads = {0}", runningThreads);
+            logger.Info("Start TearDown, runningThreads = {0}", runningThreads);
             foreach (var thread in threads ?? new List<Thread>())
-                thread.Abort();
+            {
+                if (thread.IsAlive)
+                    thread.Abort();
+            }
         }
 
         [TestCase(LocalRivalOptimization.Disabled, Category = "LongRunning")]
@@ -133,8 +136,9 @@ namespace Cassandra.DistributedLock.Tests
             logger.Info("JoinThreads. begin");
             isEnd = true;
             running.Set();
+            var timeout = TimeSpan.FromMinutes(5);
             foreach (var thread in threads)
-                Assert.That(thread.Join(TimeSpan.FromSeconds(180)), "Не удалось остановить поток");
+                Assert.That(thread.Join(timeout), $"Thread {thread.ManagedThreadId} didn't finish in {timeout}");
             logger.Info("JoinThreads. end");
         }
 

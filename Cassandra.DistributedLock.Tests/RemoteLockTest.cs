@@ -74,7 +74,7 @@ namespace Cassandra.DistributedLock.Tests
             DisposeRemoteLockCreators(remoteLockCreators);
         }
 
-        private void IncrementDecrementAction(IRemoteLockCreator lockCreator, Random random)
+        private void IncrementDecrementAction(IRemoteLockCreator lockCreator)
         {
             try
             {
@@ -122,12 +122,10 @@ namespace Cassandra.DistributedLock.Tests
             }
         }
 
-        private void AddThread(Action<IRemoteLockCreator, Random> shortAction, IRemoteLockCreator lockCreator)
+        private void AddThread(Action<IRemoteLockCreator> shortAction, IRemoteLockCreator lockCreator)
         {
-            var seed = Guid.NewGuid().GetHashCode();
-            var thread = new Thread(() => MakePeriodicAction(shortAction, seed, lockCreator));
+            var thread = new Thread(() => MakePeriodicAction(shortAction, lockCreator));
             thread.Start();
-            logger.Info("Add thread with seed = {0}", seed);
             threads.Add(thread);
         }
 
@@ -161,16 +159,15 @@ namespace Cassandra.DistributedLock.Tests
             logger.Info("RunThreads. end");
         }
 
-        private void MakePeriodicAction(Action<IRemoteLockCreator, Random> shortAction, int seed, IRemoteLockCreator lockCreator)
+        private void MakePeriodicAction(Action<IRemoteLockCreator> shortAction, IRemoteLockCreator lockCreator)
         {
             try
             {
-                var localRandom = new Random(seed);
                 while (!isEnd)
                 {
                     running.WaitOne();
                     Interlocked.Increment(ref runningThreads);
-                    shortAction(lockCreator, localRandom);
+                    shortAction(lockCreator);
                     Interlocked.Decrement(ref runningThreads);
                 }
             }

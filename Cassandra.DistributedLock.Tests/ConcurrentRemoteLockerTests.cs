@@ -8,6 +8,8 @@ using Cassandra.DistributedLock.Tests.FailedCassandra;
 
 using NUnit.Framework;
 
+using SkbKontur.Cassandra.TimeBasedUuid;
+
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 
 namespace Cassandra.DistributedLock.Tests
@@ -171,7 +173,6 @@ namespace Cassandra.DistributedLock.Tests
                     var remoteLockCreator = tester[th];
                     actions[th] = state =>
                         {
-                            var rng = new Random(Guid.NewGuid().GetHashCode());
                             var op = 0;
                             while (op < cfg.OperationsPerThread)
                             {
@@ -181,18 +182,18 @@ namespace Cassandra.DistributedLock.Tests
                                 {
                                     if (state.ErrorOccurred)
                                         break;
-                                    var lockIndex = rng.Next(lockIds.Length);
+                                    var lockIndex = ThreadLocalRandom.Instance.Next(lockIds.Length);
                                     var lockId = lockIds[lockIndex];
-                                    @lock = Lock(remoteLockCreator, syncSignal, rng, lockId, state);
+                                    @lock = Lock(remoteLockCreator, syncSignal, lockId, state);
                                     if (@lock == null)
                                         break;
                                     var localOpsCounter = opsCounters.GetOrAdd(lockId, 0);
                                     var resource = Guid.NewGuid();
                                     resources[lockId] = resource;
-                                    var opDuration = TimeSpan.FromMilliseconds(rng.Next(1, 47));
-                                    if (rng.NextDouble() < cfg.FastRunningOpProbability)
+                                    var opDuration = TimeSpan.FromMilliseconds(ThreadLocalRandom.Instance.Next(1, 47));
+                                    if (ThreadLocalRandom.Instance.NextDouble() < cfg.FastRunningOpProbability)
                                         opDuration = TimeSpan.Zero;
-                                    else if (rng.NextDouble() < cfg.LongRunningOpProbability)
+                                    else if (ThreadLocalRandom.Instance.NextDouble() < cfg.LongRunningOpProbability)
                                         opDuration = opDuration.Add(longOpDuration);
                                     Thread.Sleep(opDuration);
                                     CollectionAssert.AreEqual(new[] {@lock.ThreadId}, localTester.GetThreadsInMainRow(lockId));
@@ -240,7 +241,7 @@ namespace Cassandra.DistributedLock.Tests
             }
         }
 
-        private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, ManualResetEvent syncSignal, Random rng, string lockId, MultithreadingTestHelper.RunState state)
+        private static IRemoteLock Lock(IRemoteLockCreator remoteLockCreator, ManualResetEvent syncSignal, string lockId, MultithreadingTestHelper.RunState state)
         {
             while (true)
             {
@@ -249,7 +250,7 @@ namespace Cassandra.DistributedLock.Tests
                 syncSignal.WaitOne();
                 if (remoteLockCreator.TryGetLock(lockId, out var remoteLock))
                     return remoteLock;
-                Thread.Sleep(rng.Next(32));
+                Thread.Sleep(ThreadLocalRandom.Instance.Next(32));
             }
         }
 

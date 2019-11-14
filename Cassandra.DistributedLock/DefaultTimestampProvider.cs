@@ -1,4 +1,4 @@
-﻿using System;
+using SkbKontur.Cassandra.TimeBasedUuid;
 
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
@@ -6,7 +6,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
     {
         public long GetNowTicks()
         {
-            return DateTime.UtcNow.Ticks;
+            return Timestamp.Now.Ticks;
         }
     }
 }

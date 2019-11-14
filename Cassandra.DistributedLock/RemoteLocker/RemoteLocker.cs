@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 using JetBrains.Annotations;
+
+using SkbKontur.Cassandra.TimeBasedUuid;
 
 using Vostok.Logging.Abstractions;
 
@@ -45,7 +48,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     var remoteLock = TryAcquireLock(lockId, threadId, out var concurrentThreadId);
                     if (remoteLock != null)
                         return remoteLock;
-                    var longSleep = random.Next(1000);
+                    var longSleep = ThreadLocalRandom.Instance.Next(1000);
                     logger.Warn("Поток {0} не смог взять блокировку {1}, потому что поток {2} владеет ей в данный момент. Засыпаем на {3} миллисекунд.", threadId, lockId, concurrentThreadId, longSleep);
                     Thread.Sleep(longSleep);
                 }
@@ -120,6 +123,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             return $"lockId: {lockId}, threadId: {threadId}";
         }
 
+        [SuppressMessage("ReSharper", "ParameterOnlyUsedForPreconditionCheck.Local")]
         private static void ValidateArgs(string lockId, string threadId)
         {
             if (string.IsNullOrEmpty(lockId))
@@ -151,7 +155,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 {
                 case LockAttemptStatus.Success:
                     rivalThreadId = null;
-                    var remoteLockState = new RemoteLockState(lockId, threadId, DateTime.UtcNow.Add(keepLockAliveInterval));
+                    var remoteLockState = new RemoteLockState(lockId, threadId, Timestamp.Now.Add(keepLockAliveInterval));
                     if (!remoteLocksById.TryAdd(lockId, remoteLockState))
                         throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threadId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
                     remoteLocksQueue.Add(remoteLockState);
@@ -160,7 +164,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                     rivalThreadId = lockAttempt.OwnerId;
                     return null;
                 case LockAttemptStatus.ConcurrentAttempt:
-                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
+                    var shortSleep = ThreadLocalRandom.Instance.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
                     logger.Warn("remoteLockImplementation.TryLock() returned LockAttemptStatus.ConcurrentAttempt for lockId: {0}, threadId: {1}. Will sleep for {2} ms", lockId, threadId, shortSleep);
                     Thread.Sleep(shortSleep);
                     break;
@@ -230,9 +234,9 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             lock (remoteLockState)
             {
                 var nextKeepAliveMoment = remoteLockState.NextKeepAliveMoment;
-                if (!nextKeepAliveMoment.HasValue)
+                if (nextKeepAliveMoment == null)
                     return;
-                var utcNow = DateTime.UtcNow;
+                var utcNow = Timestamp.Now;
                 if (utcNow < nextKeepAliveMoment)
                     timeToSleep = nextKeepAliveMoment - utcNow;
             }
@@ -240,12 +244,12 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 Thread.Sleep(timeToSleep.Value);
             lock (remoteLockState)
             {
-                if (!remoteLockState.NextKeepAliveMoment.HasValue)
+                if (remoteLockState.NextKeepAliveMoment == null)
                     return;
                 var relocked = TryRelock(remoteLockState);
                 if (relocked && !remoteLocksQueue.IsAddingCompleted)
                 {
-                    remoteLockState.NextKeepAliveMoment = DateTime.UtcNow.Add(keepLockAliveInterval);
+                    remoteLockState.NextKeepAliveMoment = Timestamp.Now.Add(keepLockAliveInterval);
                     remoteLocksQueue.Add(remoteLockState);
                 }
             }
@@ -268,7 +272,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
                 }
                 catch (Exception e)
                 {
-                    var shortSleep = random.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
+                    var shortSleep = ThreadLocalRandom.Instance.Next(50 * (int)Math.Exp(Math.Min(attempt++, 5)));
                     logger.Warn(e, "remoteLockImplementation.Relock() failed for: {0}. Will sleep for {1} ms", remoteLockState, shortSleep);
                     Thread.Sleep(shortSleep);
                 }
@@ -281,14 +285,13 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
         private readonly TimeSpan lockOperationWarnThreshold;
         private readonly IRemoteLockImplementation remoteLockImplementation;
         private readonly RemoteLockerMetrics metrics;
-        private readonly Random random = new Random(Guid.NewGuid().GetHashCode());
         private readonly ILog logger;
         private readonly ConcurrentDictionary<string, RemoteLockState> remoteLocksById = new ConcurrentDictionary<string, RemoteLockState>();
         private readonly BoundedBlockingQueue<RemoteLockState> remoteLocksQueue = new BoundedBlockingQueue<RemoteLockState>(int.MaxValue);
 
         private class RemoteLockState
         {
-            public RemoteLockState(string lockId, string threadId, DateTime nextKeepAliveMoment)
+            public RemoteLockState(string lockId, string threadId, [NotNull] Timestamp nextKeepAliveMoment)
             {
                 LockId = lockId;
                 ThreadId = threadId;
@@ -296,8 +299,11 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
             }
 
             public string LockId { get; }
+
             public string ThreadId { get; }
-            public DateTime? NextKeepAliveMoment { get; set; }
+
+            [CanBeNull]
+            public Timestamp NextKeepAliveMoment { get; set; }
 
             public override string ToString()
             {

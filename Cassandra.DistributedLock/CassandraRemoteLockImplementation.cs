@@ -7,6 +7,8 @@ using JetBrains.Annotations;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
 
+using SkbKontur.Cassandra.TimeBasedUuid;
+
 namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
 {
     public class CassandraRemoteLockImplementation : IRemoteLockImplementation
@@ -26,7 +28,7 @@ namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
         public LockAttemptResult TryLock([NotNull] string lockId, [NotNull] string threadId)
         {
             var lockMetadata = baseOperationsPerformer.TryGetLockMetadata(lockId) ?? new LockMetadata(lockId, lockId, 0, null, null, 0L);
-            var newThreshold = NewThreshold(lockMetadata.PreviousThreshold ?? (DateTime.UtcNow - TimeSpan.FromHours(1)).Ticks);
+            var newThreshold = NewThreshold(lockMetadata.PreviousThreshold ?? (Timestamp.Now - TimeSpan.FromHours(1)).Ticks);
 
             LockAttemptResult result;
             var probableOwnerThreadId = lockMetadata.ProbableOwnerThreadId;

@@ -1,5 +1,7 @@
 using System;
 
+using SkbKontur.Cassandra.TimeBasedUuid;
+
 using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 
 namespace Cassandra.DistributedLock.Tests
@@ -22,19 +24,14 @@ namespace Cassandra.DistributedLock.Tests
                 diff = 0;
                 break;
             case TimestampProviderStochasticType.OnlyPositive:
-                diff = TimeSpan.FromMilliseconds(Rng.Next(Math.Max(1, (int)lockTtl.TotalMilliseconds / 2), (int)lockTtl.TotalMilliseconds)).Ticks;
+                diff = TimeSpan.FromMilliseconds(ThreadLocalRandom.Instance.Next(Math.Max(1, (int)lockTtl.TotalMilliseconds / 2), (int)lockTtl.TotalMilliseconds)).Ticks;
                 break;
             case TimestampProviderStochasticType.BothPositiveAndNegative:
-                diff = TimeSpan.FromMilliseconds(Rng.Next(Math.Max(1, (int)lockTtl.TotalMilliseconds / 4), (int)lockTtl.TotalMilliseconds / 2)).Ticks * Rng.Next(-1, 2);
+                diff = TimeSpan.FromMilliseconds(ThreadLocalRandom.Instance.Next(Math.Max(1, (int)lockTtl.TotalMilliseconds / 4), (int)lockTtl.TotalMilliseconds / 2)).Ticks * ThreadLocalRandom.Instance.Next(-1, 2);
                 break;
             }
-            return DateTime.UtcNow.Ticks + diff;
+            return Timestamp.Now.Ticks + diff;
         }
-
-        private static Random Rng => random ?? (random = new Random(Guid.NewGuid().GetHashCode()));
-
-        [ThreadStatic]
-        private static Random random;
 
         private readonly TimestampProviderStochasticType stochasticType;
         private readonly TimeSpan lockTtl;

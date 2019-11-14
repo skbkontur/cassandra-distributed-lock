@@ -35,7 +35,7 @@ namespace Cassandra.DistributedLock.Tests.FailedCassandra
         public IColumnFamilyConnection RetrieveColumnFamilyConnection(string keySpaceName, string columnFamilyName)
         {
             var columnFamilyConnection = cassandraCluster.RetrieveColumnFamilyConnection(keySpaceName, columnFamilyName);
-            return new FailedColumnFamilyConnection(columnFamilyConnection, random, failProbability);
+            return new FailedColumnFamilyConnection(columnFamilyConnection, failProbability);
         }
 
         public IColumnFamilyConnectionImplementation RetrieveColumnFamilyConnectionImplementation(string keySpaceName, string columnFamilyName)
@@ -60,6 +60,5 @@ namespace Cassandra.DistributedLock.Tests.FailedCassandra
 
         private readonly double failProbability;
         private readonly ICassandraCluster cassandraCluster;
-        private readonly Random random = new Random(Guid.NewGuid().GetHashCode());
     }
 }

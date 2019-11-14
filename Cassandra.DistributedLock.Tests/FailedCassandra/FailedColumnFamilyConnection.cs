@@ -4,14 +4,15 @@ using System.Collections.Generic;
 using SKBKontur.Cassandra.CassandraClient.Abstractions;
 using SKBKontur.Cassandra.CassandraClient.Connections;
 
+using SkbKontur.Cassandra.TimeBasedUuid;
+
 namespace Cassandra.DistributedLock.Tests.FailedCassandra
 {
     public class FailedColumnFamilyConnection : IColumnFamilyConnection
     {
-        public FailedColumnFamilyConnection(IColumnFamilyConnection connection, Random random, double failProbability)
+        public FailedColumnFamilyConnection(IColumnFamilyConnection connection, double failProbability)
         {
             this.connection = connection;
-            this.random = random;
             this.failProbability = failProbability;
         }
 
@@ -187,15 +188,11 @@ namespace Cassandra.DistributedLock.Tests.FailedCassandra
 
         private void MayBeFail()
         {
-            lock (random)
-            {
-                if (random.NextDouble() < failProbability)
-                    throw new FailedCassandraClusterException("Ошибка при работе с кассандрой");
-            }
+            if (ThreadLocalRandom.Instance.NextDouble() < failProbability)
+                throw new FailedCassandraClusterException("Ошибка при работе с кассандрой");
         }
 
         private readonly IColumnFamilyConnection connection;
-        private readonly Random random;
         private readonly double failProbability;
     }
 }

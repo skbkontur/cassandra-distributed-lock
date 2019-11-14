@@ -43,6 +43,11 @@ namespace Cassandra.DistributedLock.Tests.FailedCassandra
             throw new NotImplementedException();
         }
 
+        public ITimeBasedColumnFamilyConnection RetrieveTimeBasedColumnFamilyConnection(string keySpaceName, string columnFamilyName)
+        {
+            throw new NotImplementedException();
+        }
+
         public Dictionary<ConnectionPoolKey, KeyspaceConnectionPoolKnowledge> GetKnowledges()
         {
             return cassandraCluster.GetKnowledges();

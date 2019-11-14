@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.2.x - 2019.11.15
+- Use monotonic timestamp from [SkbKontur.Cassandra.TimeGuid](https://github.com/skbkontur/cassandra-time-guid) package.
+- Use [SourceLink](https://github.com/dotnet/sourcelink) to help ReSharper decompiler show actual code.
+
 ## v2.1.8 - 2019.10.12
 - Target .NET Standard 2.0 (PR [#1](https://github.com/skbkontur/cassandra-distributed-lock/pull/1)).
 

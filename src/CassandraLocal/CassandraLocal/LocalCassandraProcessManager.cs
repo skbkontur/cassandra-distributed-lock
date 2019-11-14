@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -113,19 +113,19 @@ namespace SkbKontur.Cassandra.Local
         private static string GetLocalCassandraNodeName(Process cassandraShellProcess, TimeSpan? timeout)
         {
             string javaCommandLine = null;
-            WaitFor($"get java command line for cassandra shell process #{cassandraShellProcess.Id}", timeout, () => TryGetLocalCassandraJavaCommanLine(cassandraShellProcess, out javaCommandLine));
+            WaitFor($"get java command line for cassandra shell process #{cassandraShellProcess.Id}", timeout, () => TryGetLocalCassandraJavaCommandLine(cassandraShellProcess, out javaCommandLine));
             var patternToMatch = $"{localCassandraNodeNameMarker}=";
             var startPos = javaCommandLine.IndexOf(patternToMatch, StringComparison.InvariantCultureIgnoreCase) + patternToMatch.Length;
             var endPos = javaCommandLine.IndexOf(' ', startPos);
             return javaCommandLine.Substring(startPos, endPos - startPos);
         }
 
-        private static bool TryGetLocalCassandraJavaCommanLine(Process cassandraShellProcess, out string javaCommandLine)
+        private static bool TryGetLocalCassandraJavaCommandLine(Process cassandraShellProcess, out string javaCommandLine)
         {
             using (var searcher = new ManagementObjectSearcher($"SELECT CommandLine FROM Win32_Process WHERE ParentProcessId = {cassandraShellProcess.Id}"))
             {
-                var commandLines = searcher.Get().Cast<ManagementObject>().Select(x => x["CommandLine"].ToString()).ToList();
-                javaCommandLine = commandLines.SingleOrDefault(x => x.IndexOf("java", StringComparison.InvariantCultureIgnoreCase) != -1);
+                var commandLines = searcher.Get().Cast<ManagementObject>().Select(x => x?["CommandLine"]?.ToString()).ToList();
+                javaCommandLine = commandLines.SingleOrDefault(x => x != null && x.IndexOf("java", StringComparison.InvariantCultureIgnoreCase) != -1);
                 return !string.IsNullOrEmpty(javaCommandLine);
             }
         }

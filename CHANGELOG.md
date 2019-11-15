@@ -1,7 +1,7 @@
 # Changelog
 
-## v2.2.x - 2019.11.15
-- Use monotonic timestamp from [SkbKontur.Cassandra.TimeGuid](https://github.com/skbkontur/cassandra-time-guid) package.
+## v2.2.5 - 2019.11.15
+- Use precise monotonic timestamp from [SkbKontur.Cassandra.TimeGuid](https://github.com/skbkontur/cassandra-time-guid) package.
 - Use [SourceLink](https://github.com/dotnet/sourcelink) to help ReSharper decompiler show actual code.
 
 ## v2.1.8 - 2019.10.12

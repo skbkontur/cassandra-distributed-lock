@@ -3,7 +3,7 @@ using System;
 using Metrics;
 using Metrics.Utils;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
+namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
 {
     public static class MetricsExtensions
     {

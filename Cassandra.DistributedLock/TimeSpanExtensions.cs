@@ -1,6 +1,6 @@
 using System;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SkbKontur.Cassandra.DistributedLock
 {
     internal static class TimeSpanExtensions
     {

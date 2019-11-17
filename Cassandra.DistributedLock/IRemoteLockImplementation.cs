@@ -2,7 +2,7 @@
 
 using JetBrains.Annotations;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SkbKontur.Cassandra.DistributedLock
 {
     public interface IRemoteLockImplementation
     {

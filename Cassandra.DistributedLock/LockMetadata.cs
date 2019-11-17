@@ -2,7 +2,7 @@ using System;
 
 using JetBrains.Annotations;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SkbKontur.Cassandra.DistributedLock
 {
     public class LockMetadata
     {

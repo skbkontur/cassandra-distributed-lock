@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SkbKontur.Cassandra.DistributedLock</AssemblyName>
-    <RootNamespace>SKBKontur.Catalogue.CassandraPrimitives.RemoteLock</RootNamespace>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

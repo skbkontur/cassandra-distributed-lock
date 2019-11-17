@@ -1,6 +1,6 @@
 using SkbKontur.Cassandra.TimeBasedUuid;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SkbKontur.Cassandra.DistributedLock
 {
     public class DefaultTimestampProvider : ITimestampProvider
     {

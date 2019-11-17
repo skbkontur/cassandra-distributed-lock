@@ -1,4 +1,4 @@
-﻿namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+﻿namespace SkbKontur.Cassandra.DistributedLock
 {
     public interface ITimestampProvider
     {

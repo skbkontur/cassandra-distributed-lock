@@ -12,8 +12,9 @@ using Metrics;
 using Metrics.Reporters;
 
 using SKBKontur.Cassandra.CassandraClient.Clusters;
-using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
-using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker;
+
+using SkbKontur.Cassandra.DistributedLock;
+using SkbKontur.Cassandra.DistributedLock.RemoteLocker;
 
 using Vostok.Logging.Abstractions;
 

@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SkbKontur.Cassandra.DistributedLock
 {
     internal static class LockRowNamesExtensions
     {

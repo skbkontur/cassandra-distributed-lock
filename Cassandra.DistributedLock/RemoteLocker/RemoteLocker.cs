@@ -9,7 +9,7 @@ using SkbKontur.Cassandra.TimeBasedUuid;
 
 using Vostok.Logging.Abstractions;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
+namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
 {
     public class RemoteLocker : IDisposable, IRemoteLockCreator
     {

@@ -1,4 +1,4 @@
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock.RemoteLocker
+namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
 {
     public class RemoteLockHandle : IRemoteLock
     {

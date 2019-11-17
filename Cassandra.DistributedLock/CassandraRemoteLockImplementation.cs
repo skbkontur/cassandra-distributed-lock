@@ -9,7 +9,7 @@ using SKBKontur.Cassandra.CassandraClient.Clusters;
 
 using SkbKontur.Cassandra.TimeBasedUuid;
 
-namespace SKBKontur.Catalogue.CassandraPrimitives.RemoteLock
+namespace SkbKontur.Cassandra.DistributedLock
 {
     public class CassandraRemoteLockImplementation : IRemoteLockImplementation
     {

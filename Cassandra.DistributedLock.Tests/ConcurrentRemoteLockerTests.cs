@@ -8,9 +8,8 @@ using Cassandra.DistributedLock.Tests.FailedCassandra;
 
 using NUnit.Framework;
 
+using SkbKontur.Cassandra.DistributedLock;
 using SkbKontur.Cassandra.TimeBasedUuid;
-
-using SKBKontur.Catalogue.CassandraPrimitives.RemoteLock;
 
 namespace Cassandra.DistributedLock.Tests
 {

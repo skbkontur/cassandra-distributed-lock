@@ -11,10 +11,9 @@ using GroBuf.DataMembersExtracters;
 using Metrics;
 using Metrics.Reporters;
 
-using SKBKontur.Cassandra.CassandraClient.Clusters;
-
 using SkbKontur.Cassandra.DistributedLock;
 using SkbKontur.Cassandra.DistributedLock.RemoteLocker;
+using SkbKontur.Cassandra.ThriftClient.Clusters;
 
 using Vostok.Logging.Abstractions;
 
@@ -30,7 +29,7 @@ namespace Cassandra.DistributedLock.Tests
             ICassandraCluster cassandraCluster = new CassandraCluster(config.CassandraClusterSettings, logger);
             if (config.CassandraFailProbability.HasValue)
                 cassandraCluster = new FailedCassandraCluster(cassandraCluster, config.CassandraFailProbability.Value);
-            var timestampProvider = new StochasticTimestampProvider(config.TimestamProviderStochasticType, config.LockTtl);
+            var timestampProvider = new StochasticTimestampProvider(config.TimestampProviderStochasticType, config.LockTtl);
             var implementationSettings = new CassandraRemoteLockImplementationSettings(timestampProvider, SingleCassandraNodeSetUpFixture.RemoteLockKeyspace, SingleCassandraNodeSetUpFixture.RemoteLockColumnFamily, config.LockTtl, config.LockMetadataTtl, config.KeepLockAliveInterval, config.ChangeLockRowThreshold);
             var cassandraRemoteLockImplementation = new CassandraRemoteLockImplementation(cassandraCluster, serializer, implementationSettings);
             remoteLockers = new RemoteLocker[config.LockersCount];

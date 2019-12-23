@@ -1,6 +1,6 @@
 using System;
 
-using SKBKontur.Cassandra.CassandraClient.Clusters;
+using SkbKontur.Cassandra.ThriftClient.Clusters;
 
 namespace Cassandra.DistributedLock.Tests
 {
@@ -12,7 +12,7 @@ namespace Cassandra.DistributedLock.Tests
         public TimeSpan LockMetadataTtl { get; set; }
         public TimeSpan KeepLockAliveInterval { get; set; }
         public int ChangeLockRowThreshold { get; set; }
-        public TimestampProviderStochasticType TimestamProviderStochasticType { get; set; }
+        public TimestampProviderStochasticType TimestampProviderStochasticType { get; set; }
         public ICassandraClusterSettings CassandraClusterSettings { get; set; }
         public double? CassandraFailProbability { get; set; }
 
@@ -26,7 +26,7 @@ namespace Cassandra.DistributedLock.Tests
                     LockMetadataTtl = TimeSpan.FromMinutes(1),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(2),
                     ChangeLockRowThreshold = 10,
-                    TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                    TimestampProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(),
                     CassandraFailProbability = null,
                 };

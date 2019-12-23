@@ -50,7 +50,7 @@ namespace Cassandra.DistributedLock.Tests
                             LockMetadataTtl = TimeSpan.FromSeconds(10),
                             KeepLockAliveInterval = TimeSpan.FromSeconds(1),
                             ChangeLockRowThreshold = 10,
-                            TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                            TimestampProviderStochasticType = TimestampProviderStochasticType.None,
                             CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                             CassandraFailProbability = null
                         },
@@ -78,7 +78,7 @@ namespace Cassandra.DistributedLock.Tests
                             LockMetadataTtl = TimeSpan.FromMinutes(10),
                             KeepLockAliveInterval = TimeSpan.Zero,
                             ChangeLockRowThreshold = 2,
-                            TimestamProviderStochasticType = stochasticType,
+                            TimestampProviderStochasticType = stochasticType,
                             CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                             CassandraFailProbability = null
                         },
@@ -106,7 +106,7 @@ namespace Cassandra.DistributedLock.Tests
                             LockMetadataTtl = TimeSpan.FromSeconds(10),
                             KeepLockAliveInterval = TimeSpan.FromMilliseconds(50),
                             ChangeLockRowThreshold = int.MaxValue,
-                            TimestamProviderStochasticType = stochasticType,
+                            TimestampProviderStochasticType = stochasticType,
                             CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromMilliseconds(350)),
                             CassandraFailProbability = null
                         },
@@ -133,7 +133,7 @@ namespace Cassandra.DistributedLock.Tests
                             LockMetadataTtl = TimeSpan.FromSeconds(10),
                             KeepLockAliveInterval = TimeSpan.FromSeconds(1),
                             ChangeLockRowThreshold = 2,
-                            TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                            TimestampProviderStochasticType = TimestampProviderStochasticType.None,
                             CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromMilliseconds(350)),
                             CassandraFailProbability = failProbability
                         },

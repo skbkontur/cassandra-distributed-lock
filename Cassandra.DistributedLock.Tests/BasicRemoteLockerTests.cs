@@ -66,7 +66,7 @@ namespace Cassandra.DistributedLock.Tests
                     LockMetadataTtl = TimeSpan.FromMinutes(1),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(5),
                     ChangeLockRowThreshold = 10,
-                    TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                    TimestampProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
             using (var tester = new RemoteLockerTester(config))
@@ -92,7 +92,7 @@ namespace Cassandra.DistributedLock.Tests
                     LockMetadataTtl = TimeSpan.FromMinutes(1),
                     KeepLockAliveInterval = TimeSpan.FromSeconds(10),
                     ChangeLockRowThreshold = 10,
-                    TimestamProviderStochasticType = TimestampProviderStochasticType.None,
+                    TimestampProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
                 };
             using (var tester = new RemoteLockerTester(config))

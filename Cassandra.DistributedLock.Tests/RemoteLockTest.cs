@@ -9,10 +9,9 @@ using GroBuf.DataMembersExtracters;
 
 using NUnit.Framework;
 
-using SKBKontur.Cassandra.CassandraClient.Clusters;
-
 using SkbKontur.Cassandra.DistributedLock;
 using SkbKontur.Cassandra.DistributedLock.RemoteLocker;
+using SkbKontur.Cassandra.ThriftClient.Clusters;
 
 using Vostok.Logging.Abstractions;
 

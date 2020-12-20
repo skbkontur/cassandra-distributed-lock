@@ -14,13 +14,14 @@ namespace SkbKontur.Cassandra.DistributedLock
     {
         public CassandraRemoteLockImplementation(ICassandraCluster cassandraCluster, ISerializer serializer, CassandraRemoteLockImplementationSettings settings)
         {
-            lockTtl = settings.LockTtl;
+            LockTtl = settings.LockTtl;
             KeepLockAliveInterval = settings.KeepLockAliveInterval;
             changeLockRowThreshold = settings.ChangeLockRowThreshold;
             timestampProvider = settings.TimestampProvider;
             baseOperationsPerformer = new CassandraBaseLockOperationsPerformer(cassandraCluster, serializer, settings);
         }
 
+        public TimeSpan LockTtl { get; }
         public TimeSpan KeepLockAliveInterval { get; }
 
         [NotNull]
@@ -52,9 +53,9 @@ namespace SkbKontur.Cassandra.DistributedLock
                 else
                 {
                     var newLockMetadata = new NewLockMetadata(lockId, Guid.NewGuid().ToString(), 1, newThreshold, threadId);
-                    baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
+                    baseOperationsPerformer.WriteThread(newLockMetadata.MainRowKey(), newThreshold, threadId, LockTtl);
                     baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
-                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl.Multiply(10));
+                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, LockTtl.Multiply(10));
                 }
             }
             return result;
@@ -75,14 +76,14 @@ namespace SkbKontur.Cassandra.DistributedLock
             var beforeOurWriteShades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
             if (beforeOurWriteShades.Length > 0)
                 return LockAttemptResult.ConcurrentAttempt();
-            baseOperationsPerformer.WriteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId, lockTtl);
+            baseOperationsPerformer.WriteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId, LockTtl);
             var shades = baseOperationsPerformer.SearchThreads(lockMetadata.ShadowRowKey(), lockMetadata.PreviousThreshold);
             if (shades.Length == 1)
             {
                 items = baseOperationsPerformer.SearchThreads(lockMetadata.MainRowKey(), lockMetadata.PreviousThreshold);
                 if (items.Length == 0)
                 {
-                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
+                    baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, LockTtl);
                     baseOperationsPerformer.DeleteThread(lockMetadata.ShadowRowKey(), newThreshold, threadId);
                     return LockAttemptResult.Success();
                 }
@@ -107,7 +108,7 @@ namespace SkbKontur.Cassandra.DistributedLock
                 return false;
             var newThreshold = NewThreshold(lockMetadata.GetPreviousThreshold());
             var newLockMetadata = new NewLockMetadata(lockMetadata.LockId, lockMetadata.LockRowId, lockMetadata.LockCount, newThreshold, threadId);
-            baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, lockTtl);
+            baseOperationsPerformer.WriteThread(lockMetadata.MainRowKey(), newThreshold, threadId, LockTtl);
             baseOperationsPerformer.WriteLockMetadata(newLockMetadata, lockMetadata.Timestamp);
             baseOperationsPerformer.DeleteThread(lockMetadata.MainRowKey(), lockMetadata.GetPreviousThreshold(), threadId);
             return true;
@@ -141,7 +142,6 @@ namespace SkbKontur.Cassandra.DistributedLock
             return Math.Max(timestampProvider.GetNowTicks(), previousThreshold + 1);
         }
 
-        private readonly TimeSpan lockTtl;
         private readonly int changeLockRowThreshold;
         private readonly ITimestampProvider timestampProvider;
         private readonly CassandraBaseLockOperationsPerformer baseOperationsPerformer;

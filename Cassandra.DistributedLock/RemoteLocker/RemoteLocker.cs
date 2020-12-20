@@ -159,7 +159,7 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
                     if (!remoteLocksById.TryAdd(lockId, remoteLockState))
                         throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threadId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
                     remoteLocksQueue.Add(remoteLockState);
-                    return new RemoteLockHandle(lockId, threadId, this);
+                    return new RemoteLockHandle(lockId, threadId, remoteLockState.ExpirationTokenSource.Token, this);
                 case LockAttemptStatus.AnotherThreadIsOwner:
                     rivalThreadId = lockAttempt.OwnerId;
                     return null;
@@ -186,6 +186,7 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
             lock (remoteLockState)
             {
                 remoteLockState.NextKeepAliveMoment = null;
+                remoteLockState.ExpirationTokenSource.Dispose();
                 try
                 {
                     using (metrics.CassandraImplUnlockOp.NewContext(remoteLockState.ToString()))
@@ -260,6 +261,12 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
             var attempt = 1;
             while (true)
             {
+                if (Timestamp.Now - remoteLockState.NextKeepAliveMoment > remoteLockImplementation.LockTtl.Multiply(0.5))
+                {
+                    remoteLockState.ExpirationTokenSource.Cancel();
+                    logger.Error("KeepLockAlive() freeze is detected. Signal ExpirationToken to prevent possible lock collision for: {0}", remoteLockState);
+                }
+
                 try
                 {
                     using (metrics.CassandraImplRelockOp.NewContext(remoteLockState.ToString()))
@@ -304,6 +311,9 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
 
             [CanBeNull]
             public Timestamp NextKeepAliveMoment { get; set; }
+
+            [NotNull]
+            public CancellationTokenSource ExpirationTokenSource { get; } = new CancellationTokenSource();
 
             public override string ToString()
             {

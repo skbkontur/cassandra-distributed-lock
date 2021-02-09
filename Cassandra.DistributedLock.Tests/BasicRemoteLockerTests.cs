@@ -64,7 +64,7 @@ namespace Cassandra.DistributedLock.Tests
                     LocalRivalOptimization = LocalRivalOptimization.Disabled,
                     LockTtl = TimeSpan.FromSeconds(10),
                     LockMetadataTtl = TimeSpan.FromMinutes(1),
-                    KeepLockAliveInterval = TimeSpan.FromSeconds(5),
+                    KeepLockAliveInterval = TimeSpan.FromSeconds(4),
                     ChangeLockRowThreshold = 10,
                     TimestampProviderStochasticType = TimestampProviderStochasticType.None,
                     CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(attempts : 1, timeout : TimeSpan.FromSeconds(1)),
@@ -105,6 +105,37 @@ namespace Cassandra.DistributedLock.Tests
                 Assert.That(tester[1].TryGetLock(lockId, out lock2), Is.True);
                 lock2.Dispose();
                 lock1.Dispose();
+            }
+        }
+
+        [Test]
+        public void LockCancellationToken_IsCancelled_AfterLoosingLock()
+        {
+            var config = new RemoteLockerTesterConfig
+                {
+                    LockersCount = 1,
+                    LocalRivalOptimization = LocalRivalOptimization.Disabled,
+                    LockTtl = TimeSpan.FromSeconds(1),
+                    LockMetadataTtl = TimeSpan.FromMinutes(1), 
+                    KeepLockAliveInterval = TimeSpan.FromSeconds(1),
+                    ChangeLockRowThreshold = 10,
+                    TimestampProviderStochasticType = TimestampProviderStochasticType.None,
+                    CassandraClusterSettings = SingleCassandraNodeSetUpFixture.CreateCassandraClusterSettings(),
+                    CassandraFailProbability = null,
+                };
+
+            using (var tester = new RemoteLockerTester(config))
+            {
+                var lockId = Guid.NewGuid().ToString();
+
+                var lock1 = tester[0].Lock(lockId);
+                Assert.That(lock1.LockAliveToken.IsCancellationRequested, Is.False);
+
+                // waiting while keepalive detects losing the lock
+                Thread.Sleep(config.LockTtl);
+
+                var canceled = lock1.LockAliveToken.IsCancellationRequested;
+                Assert.That(canceled, Is.True);
             }
         }
     }

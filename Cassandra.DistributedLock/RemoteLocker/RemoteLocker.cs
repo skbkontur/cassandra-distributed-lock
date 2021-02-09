@@ -18,6 +18,7 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
             this.remoteLockImplementation = remoteLockImplementation;
             this.metrics = metrics;
             this.logger = logger.ForContext("CassandraDistributedLock");
+            lockTtl = remoteLockImplementation.LockTtl;
             keepLockAliveInterval = remoteLockImplementation.KeepLockAliveInterval;
             lockOperationWarnThreshold = remoteLockImplementation.KeepLockAliveInterval.Multiply(2);
             remoteLocksKeeperThread = new Thread(KeepRemoteLocksAlive)
@@ -149,17 +150,18 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
             while (true)
             {
                 LockAttemptResult lockAttempt;
+                var holdLockMoment = Timestamp.Now;
                 using (metrics.CassandraImplTryLockOp.NewContext(FormatLockOperationId(lockId, threadId)))
                     lockAttempt = remoteLockImplementation.TryLock(lockId, threadId);
                 switch (lockAttempt.Status)
                 {
                 case LockAttemptStatus.Success:
                     rivalThreadId = null;
-                    var remoteLockState = new RemoteLockState(lockId, threadId, Timestamp.Now.Add(keepLockAliveInterval));
+                    var remoteLockState = new RemoteLockState(lockId, threadId, holdLockMoment);
                     if (!remoteLocksById.TryAdd(lockId, remoteLockState))
                         throw new InvalidOperationException($"RemoteLocker state is corrupted. lockId: {lockId}, threadId: {threadId}, remoteLocksById[lockId]: {remoteLockState}");
                     remoteLocksQueue.Add(remoteLockState);
-                    return new RemoteLockHandle(lockId, threadId, this);
+                    return new RemoteLockHandle(lockId, threadId, remoteLockState.CancellationTokenSource.Token, this);
                 case LockAttemptStatus.AnotherThreadIsOwner:
                     rivalThreadId = lockAttempt.OwnerId;
                     return null;
@@ -185,7 +187,8 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
         {
             lock (remoteLockState)
             {
-                remoteLockState.NextKeepAliveMoment = null;
+                remoteLockState.IsAlive = false;
+                remoteLockState.CancellationTokenSource.Dispose();
                 try
                 {
                     using (metrics.CassandraImplUnlockOp.NewContext(remoteLockState.ToString()))
@@ -233,10 +236,11 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
             TimeSpan? timeToSleep = null;
             lock (remoteLockState)
             {
-                var nextKeepAliveMoment = remoteLockState.NextKeepAliveMoment;
-                if (nextKeepAliveMoment == null)
+                if (!remoteLockState.IsAlive)
                     return;
+
                 var utcNow = Timestamp.Now;
+                var nextKeepAliveMoment = remoteLockState.HeartbeatMoment.Add(keepLockAliveInterval);
                 if (utcNow < nextKeepAliveMoment)
                     timeToSleep = nextKeepAliveMoment - utcNow;
             }
@@ -244,29 +248,45 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
                 Thread.Sleep(timeToSleep.Value);
             lock (remoteLockState)
             {
-                if (remoteLockState.NextKeepAliveMoment == null)
+                if (!remoteLockState.IsAlive)
                     return;
-                var relocked = TryRelock(remoteLockState);
+                var relocked = Relock(remoteLockState);
                 if (relocked && !remoteLocksQueue.IsAddingCompleted)
                 {
-                    remoteLockState.NextKeepAliveMoment = Timestamp.Now.Add(keepLockAliveInterval);
                     remoteLocksQueue.Add(remoteLockState);
+                }
+                else
+                {
+                    remoteLockState.CancellationTokenSource.Cancel();
                 }
             }
         }
 
-        private bool TryRelock(RemoteLockState remoteLockState)
+        private bool Relock(RemoteLockState remoteLockState)
         {
             var attempt = 1;
             while (true)
             {
+                var now = Timestamp.Now;
+                if (remoteLockState.HeartbeatMoment.Add(lockTtl.Multiply(0.5)) < now)
+                {
+                    logger.Error("KeepLockAlive() freeze is detected. Signal LockAliveToken to prevent possible lock collision for: {0}", remoteLockState);
+                    return false;
+                }
+
                 try
                 {
                     using (metrics.CassandraImplRelockOp.NewContext(remoteLockState.ToString()))
                     {
                         var relocked = remoteLockImplementation.TryRelock(remoteLockState.LockId, remoteLockState.ThreadId);
-                        if (!relocked)
+                        if (relocked)
+                        {
+                            remoteLockState.HeartbeatMoment = now;
+                        }
+                        else
+                        {
                             logger.Error("Cannot relock. Possible lock metadata corruption for: {0}", remoteLockState);
+                        }
                         return relocked;
                     }
                 }
@@ -281,6 +301,7 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
 
         private volatile bool isDisposed;
         private readonly Thread remoteLocksKeeperThread;
+        private readonly TimeSpan lockTtl;
         private readonly TimeSpan keepLockAliveInterval;
         private readonly TimeSpan lockOperationWarnThreshold;
         private readonly IRemoteLockImplementation remoteLockImplementation;
@@ -291,23 +312,29 @@ namespace SkbKontur.Cassandra.DistributedLock.RemoteLocker
 
         private class RemoteLockState
         {
-            public RemoteLockState(string lockId, string threadId, [NotNull] Timestamp nextKeepAliveMoment)
+            public RemoteLockState(string lockId, string threadId, [NotNull] Timestamp heartbeatMoment)
             {
                 LockId = lockId;
                 ThreadId = threadId;
-                NextKeepAliveMoment = nextKeepAliveMoment;
+                HeartbeatMoment = heartbeatMoment;
+                CancellationTokenSource = new CancellationTokenSource();
+                IsAlive = true;
             }
 
             public string LockId { get; }
 
             public string ThreadId { get; }
 
-            [CanBeNull]
-            public Timestamp NextKeepAliveMoment { get; set; }
+            public bool IsAlive { get; set; }
+
+            [NotNull]
+            public Timestamp HeartbeatMoment { get; set; }
+
+            public CancellationTokenSource CancellationTokenSource { get; }
 
             public override string ToString()
             {
-                return $"LockId: {LockId}, ThreadId: {ThreadId}, NextKeepAliveMoment: {NextKeepAliveMoment}";
+                return $"LockId: {LockId}, ThreadId: {ThreadId}, HeartbeatMoment: {HeartbeatMoment}";
             }
         }
     }

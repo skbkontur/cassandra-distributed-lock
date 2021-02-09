@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Threading;
 
 namespace SkbKontur.Cassandra.DistributedLock
 {
@@ -6,5 +7,6 @@ namespace SkbKontur.Cassandra.DistributedLock
     {
         string LockId { get; }
         string ThreadId { get; }
+        CancellationToken LockAliveToken { get; }
     }
 }

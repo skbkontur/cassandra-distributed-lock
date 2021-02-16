@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using JetBrains.Annotations;
 
@@ -6,6 +6,7 @@ namespace SkbKontur.Cassandra.DistributedLock
 {
     public interface IRemoteLockImplementation
     {
+        TimeSpan LockTtl { get; }
         TimeSpan KeepLockAliveInterval { get; }
 
         [NotNull]

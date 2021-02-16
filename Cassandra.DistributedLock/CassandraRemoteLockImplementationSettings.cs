@@ -43,7 +43,13 @@ namespace SkbKontur.Cassandra.DistributedLock
         [NotNull]
         public static CassandraRemoteLockImplementationSettings Default([NotNull] string keyspaceName, [NotNull] string columnFamilyName)
         {
-            return new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(), keyspaceName, columnFamilyName, TimeSpan.FromMinutes(3), TimeSpan.FromDays(7), TimeSpan.FromSeconds(10), 1000);
+            return new CassandraRemoteLockImplementationSettings(new DefaultTimestampProvider(),
+                                                                 keyspaceName,
+                                                                 columnFamilyName,
+                                                                 lockTtl : TimeSpan.FromMinutes(3),
+                                                                 lockMetadataTtl : TimeSpan.FromDays(7),
+                                                                 keepLockAliveInterval : TimeSpan.FromSeconds(10),
+                                                                 changeLockRowThreshold : 1000);
         }
     }
 }

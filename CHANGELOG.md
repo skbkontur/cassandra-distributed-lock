@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.2.12 - 2021.02.17
+- Implement distributed lock expiration signal (`IRemoteLock.LockAliveToken`) for more robust leader election.
+
 ## v2.2.8 - 2019.12.23
 - Adjust root namespace name to match assembly name.
 

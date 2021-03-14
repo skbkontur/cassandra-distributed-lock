@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.2.14 - 2021.03.14
+- Update dependencies.
+- Run tests against net5.0 tfm.
+
 ## v2.2.12 - 2021.02.17
 - Implement distributed lock expiration signal (`IRemoteLock.LockAliveToken`) for more robust leader election.
 

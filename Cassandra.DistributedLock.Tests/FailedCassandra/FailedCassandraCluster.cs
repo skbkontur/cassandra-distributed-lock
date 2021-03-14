@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 
 using SkbKontur.Cassandra.ThriftClient.Clusters;
-using SkbKontur.Cassandra.ThriftClient.Clusters.ActualizationEventListener;
 using SkbKontur.Cassandra.ThriftClient.Connections;
 using SkbKontur.Cassandra.ThriftClient.Core.Pools;
-using SkbKontur.Cassandra.ThriftClient.Scheme;
 
 namespace Cassandra.DistributedLock.Tests.FailedCassandra
 {
@@ -51,11 +49,6 @@ namespace Cassandra.DistributedLock.Tests.FailedCassandra
         public Dictionary<ConnectionPoolKey, KeyspaceConnectionPoolKnowledge> GetKnowledges()
         {
             return cassandraCluster.GetKnowledges();
-        }
-
-        public void ActualizeKeyspaces(KeyspaceScheme[] keyspaces, ICassandraActualizerEventListener eventListener = null, bool changeExistingKeyspaceMetadata = false)
-        {
-            cassandraCluster.ActualizeKeyspaces(keyspaces, eventListener, changeExistingKeyspaceMetadata);
         }
 
         private readonly double failProbability;

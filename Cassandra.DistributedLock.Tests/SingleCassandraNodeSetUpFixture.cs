@@ -9,7 +9,7 @@ using NUnit.Framework;
 using SkbKontur.Cassandra.Local;
 using SkbKontur.Cassandra.ThriftClient.Abstractions;
 using SkbKontur.Cassandra.ThriftClient.Clusters;
-using SkbKontur.Cassandra.ThriftClient.Scheme;
+using SkbKontur.Cassandra.ThriftClient.Schema;
 
 namespace Cassandra.DistributedLock.Tests
 {
@@ -33,9 +33,11 @@ namespace Cassandra.DistributedLock.Tests
 
             var logger = Log4NetConfiguration.RootLogger.ForContext(nameof(SingleCassandraNodeSetUpFixture));
             cassandraCluster = new CassandraCluster(CreateCassandraClusterSettings(), logger);
-            cassandraCluster.ActualizeKeyspaces(new[]
+
+            var cassandraSchemaActualizer = new CassandraSchemaActualizer(cassandraCluster, eventListener : null, logger);
+            cassandraSchemaActualizer.ActualizeKeyspaces(new[]
                 {
-                    new KeyspaceScheme
+                    new KeyspaceSchema
                         {
                             Name = RemoteLockKeyspace,
                             Configuration = new KeyspaceConfiguration
@@ -51,7 +53,7 @@ namespace Cassandra.DistributedLock.Tests
                                         }
                                 }
                         }
-                });
+                }, changeExistingKeyspaceMetadata : false);
         }
 
         [OneTimeTearDown]

@@ -50,10 +50,7 @@ namespace SkbKontur.Cassandra.DistributedLock
         {
             var exists = false;
             var columnName = TransformThreadIdToColumnName(threshold, threadId);
-            MakeInConnection(connection =>
-                {
-                    exists = connection.TryGetColumn(lockRowId, columnName, out _);
-                });
+            MakeInConnection(connection => { exists = connection.TryGetColumn(lockRowId, columnName, out _); });
             return exists;
         }
 
@@ -64,10 +61,10 @@ namespace SkbKontur.Cassandra.DistributedLock
             var inclusiveStartColumnName = ThresholdToString(threshold - lockTtl.Multiply(2).Ticks);
             MakeInConnection(connection => columns = connection.GetColumns(lockRowId, inclusiveStartColumnName, endColumnName : null, count : int.MaxValue));
             return columns
-                .Where(x => x.Value != null && x.Value.Length != 0)
-                .Select(x => TransformColumnNameToThreadId(x.Name))
-                .Distinct()
-                .ToArray();
+                   .Where(x => x.Value != null && x.Value.Length != 0)
+                   .Select(x => TransformColumnNameToThreadId(x.Name))
+                   .Distinct()
+                   .ToArray();
         }
 
         public void WriteLockMetadata([NotNull] NewLockMetadata newLockMetadata, long oldLockMetadataTimestamp)

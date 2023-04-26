@@ -7,11 +7,14 @@ on:
       - "**/*.md"
   workflow_dispatch:
 env:
-  DOTNET_VERSION: 6.0.x
+  DOTNET_VERSION: 6.0
   SOLUTION_FILE: Cassandra.DistributedLock.sln
 jobs:
   test:
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        dotnet: [net48, net6.0]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -35,7 +38,7 @@ jobs:
         run: docker compose up --wait
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --filter TestCategory!=LongRunning ${{ env.SOLUTION_FILE }}
+        run: dotnet test --no-build --framework ${{ matrix.dotnet }} --configuration Release --filter TestCategory!=LongRunning Cassandra.DistributedLock.Tests/Cassandra.DistributedLock.Tests.csproj
 
       - name: Stop docker
         if: always()

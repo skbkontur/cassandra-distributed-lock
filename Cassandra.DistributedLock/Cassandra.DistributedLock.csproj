@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GroBuf" Version="1.7.6" />
+    <PackageReference Include="GroBuf" Version="1.9.2" />
     <PackageReference Include="SkbKontur.Cassandra.ThriftClient" Version="2.4.29" />
   </ItemGroup>
 
